@@ -1,0 +1,476 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for English (`en`).
+class AppLocalizationsEn extends AppLocalizations {
+  AppLocalizationsEn([String locale = 'en']) : super(locale);
+
+  @override
+  String get appTitle => 'Gama Physics';
+
+  @override
+  String get studentLogin => 'Student Login';
+
+  @override
+  String get teacherLogin => 'Teacher Login';
+
+  @override
+  String get iAmStudent => 'I\'m a Student';
+
+  @override
+  String get iAmTeacher => 'I\'m a Teacher';
+
+  @override
+  String get welcome => 'Welcome Back';
+
+  @override
+  String get loginWithPhone => 'Login with your phone number and password';
+
+  @override
+  String get phoneNumber => 'Phone Number';
+
+  @override
+  String get password => 'Password';
+
+  @override
+  String get login => 'Login';
+
+  @override
+  String get noAccount => 'Don\'t have an account?';
+
+  @override
+  String get registerNow => 'Register Now';
+
+  @override
+  String get newStudent => 'New Student Registration';
+
+  @override
+  String get createAccount => 'Create New Account';
+
+  @override
+  String get fullName => 'Full Name';
+
+  @override
+  String get stage => 'Academic Stage';
+
+  @override
+  String get confirmPassword => 'Confirm Password';
+
+  @override
+  String get createAccountBtn => 'Create Account';
+
+  @override
+  String get haveAccount => 'Already have an account?';
+
+  @override
+  String get teacherPanel => 'Teacher Panel';
+
+  @override
+  String get loginToPanel => 'Login to your control panel';
+
+  @override
+  String get email => 'Email';
+
+  @override
+  String get stages => 'Stages';
+
+  @override
+  String get semesters => 'Semesters';
+
+  @override
+  String get lessons => 'Lessons';
+
+  @override
+  String get manageLessons => 'Manage Lessons';
+
+  @override
+  String get manageStages => 'Manage Stages';
+
+  @override
+  String get manageCodes => 'Manage Codes';
+
+  @override
+  String get manageStudents => 'Manage Students';
+
+  @override
+  String get controlPanel => 'Control Panel';
+
+  @override
+  String get welcomeTeacher => 'Welcome, Teacher';
+
+  @override
+  String get free => 'Free';
+
+  @override
+  String get paid => 'Paid';
+
+  @override
+  String get visible => 'Visible';
+
+  @override
+  String get hidden => 'Hidden';
+
+  @override
+  String get noLessons => 'No lessons available currently';
+
+  @override
+  String get noStages => 'No stages available currently';
+
+  @override
+  String get noSemesters => 'No semesters available';
+
+  @override
+  String get paidLesson => 'Paid Lesson';
+
+  @override
+  String get enterCode => 'Enter access code to watch this lesson';
+
+  @override
+  String get code => 'Code';
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String get invalidCode => 'Invalid or expired code';
+
+  @override
+  String get profile => 'Profile';
+
+  @override
+  String get changePassword => 'Change Password';
+
+  @override
+  String get newPassword => 'New Password';
+
+  @override
+  String get confirmNewPassword => 'Confirm New Password';
+
+  @override
+  String get savePassword => 'Save Password';
+
+  @override
+  String get logout => 'Logout';
+
+  @override
+  String get students => 'Students';
+
+  @override
+  String get studentCount => 'Student Count';
+
+  @override
+  String get searchStudents => 'Search by name or phone...';
+
+  @override
+  String get noStudents => 'No students found';
+
+  @override
+  String get disableAccount => 'Disable Account';
+
+  @override
+  String get deleteAccount => 'Delete Account Permanently';
+
+  @override
+  String get deleteStudentConfirm => 'Are you sure you want to delete';
+
+  @override
+  String get deleteWarning => 'Student data will be permanently deleted.';
+
+  @override
+  String get deleteBtn => 'Delete Permanently';
+
+  @override
+  String get deletedSuccess => 'Account deleted successfully';
+
+  @override
+  String get codes => 'Codes';
+
+  @override
+  String get generateCodes => 'Generate Codes';
+
+  @override
+  String get noCodes => 'No codes. Generate new codes.';
+
+  @override
+  String get codesCount => 'Number of Codes';
+
+  @override
+  String get maxUses => 'Max Uses per Code';
+
+  @override
+  String get validity => 'Validity (Days)';
+
+  @override
+  String get generate => 'Generate';
+
+  @override
+  String get active => 'Active';
+
+  @override
+  String get used => 'Used';
+
+  @override
+  String get expired => 'Expired';
+
+  @override
+  String get disabled => 'Disabled';
+
+  @override
+  String get copied => 'Code copied';
+
+  @override
+  String get copy => 'Copy';
+
+  @override
+  String get enable => 'Enable';
+
+  @override
+  String get disable => 'Disable';
+
+  @override
+  String get usedCodes => 'Used Codes';
+
+  @override
+  String get noUsedCodes => 'No codes used yet';
+
+  @override
+  String get registrationDate => 'Registration Date';
+
+  @override
+  String get passwordLabel => 'Password';
+
+  @override
+  String get notSaved => 'Not saved';
+
+  @override
+  String get usage => 'Usage';
+
+  @override
+  String get expiresOn => 'Expires';
+
+  @override
+  String get usedBy => 'Used By';
+
+  @override
+  String get addStage => 'Add Stage';
+
+  @override
+  String get editStage => 'Edit Stage';
+
+  @override
+  String get stageName => 'Stage Name';
+
+  @override
+  String get order => 'Order';
+
+  @override
+  String get add => 'Add';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get deleteConfirm => 'Confirm Delete';
+
+  @override
+  String get deleteStageConfirm => 'Are you sure you want to delete';
+
+  @override
+  String get addSemester => 'Add Semester';
+
+  @override
+  String get editSemester => 'Edit Semester';
+
+  @override
+  String get semesterName => 'Semester Name';
+
+  @override
+  String get addLesson => 'Add Lesson';
+
+  @override
+  String get editLesson => 'Edit Lesson';
+
+  @override
+  String get lessonTitle => 'Lesson Title';
+
+  @override
+  String get lessonDescription => 'Lesson Description';
+
+  @override
+  String get videoUrl => 'Video URL';
+
+  @override
+  String get videoType => 'Video Type';
+
+  @override
+  String get lessonType => 'Lesson Type';
+
+  @override
+  String get visibleToStudents => 'Visible to Students';
+
+  @override
+  String get youtubeHint =>
+      'To embed: Go to YouTube Studio → Edit Video → Enable \'Allow Embedding\'.';
+
+  @override
+  String get lessonDescription2 => 'Lesson Description';
+
+  @override
+  String get testData => 'Seed Test Data';
+
+  @override
+  String get dataExists => 'Data already exists.';
+
+  @override
+  String get testDataSuccess => 'Test data added successfully';
+
+  @override
+  String get language => 'Language';
+
+  @override
+  String get arabic => 'العربية';
+
+  @override
+  String get english => 'English';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get loading => 'Loading...';
+
+  @override
+  String get loadingLessons => 'Loading lessons...';
+
+  @override
+  String get failedToLoad => 'Failed to load lessons';
+
+  @override
+  String get physicsDesc => 'Physics Learning Platform';
+
+  @override
+  String get copyright => '© 2026 Gama Physics';
+
+  @override
+  String get passwordTooShort => 'Password must be at least 6 characters';
+
+  @override
+  String get passwordMismatch => 'Passwords do not match';
+
+  @override
+  String get enterPhone => 'Enter phone number and password';
+
+  @override
+  String get enterEmail => 'Enter email and password';
+
+  @override
+  String get enterName => 'Enter your name';
+
+  @override
+  String get phoneAlreadyUsed => 'Phone number already registered';
+
+  @override
+  String get wrongPassword => 'Wrong password';
+
+  @override
+  String get userNotFound => 'Phone number not registered';
+
+  @override
+  String get unexpectedError => 'An unexpected error occurred';
+
+  @override
+  String get accountDisabled =>
+      'Your account is disabled. Contact your teacher.';
+
+  @override
+  String get notTeacherAccount => 'This is not a teacher account';
+
+  @override
+  String get invalidEmail => 'Invalid email address';
+
+  @override
+  String get passwordChangeSuccess => 'Password changed successfully';
+
+  @override
+  String get passwordChangeError => 'Error changing password';
+
+  @override
+  String generatedSuccess(int count) {
+    return '$count codes generated successfully';
+  }
+
+  @override
+  String welcomeStudent(String name) {
+    return 'Welcome $name 👋';
+  }
+
+  @override
+  String get editExpiryTooltip => 'Edit Expiry Date';
+
+  @override
+  String get editExpiryTitle => 'Edit Codes Expiry Date';
+
+  @override
+  String get editExpirySingleTitle => 'Edit Expiry Date';
+
+  @override
+  String get bulkExpirySubtitle =>
+      'Select a lesson and set a new expiry date for all its codes';
+
+  @override
+  String get noPaidLessons => 'No paid lessons';
+
+  @override
+  String get lessonDropdownLabel => 'Lesson';
+
+  @override
+  String get pickExpiryDate => 'Pick expiry date';
+
+  @override
+  String get pickNewDate => 'Pick new date';
+
+  @override
+  String get pastDateWarningBulk =>
+      'Date is in the past — codes will be marked expired';
+
+  @override
+  String get pastDateWarningSingle =>
+      'Date is in the past — code will be marked expired';
+
+  @override
+  String get update => 'Update';
+
+  @override
+  String get expiryRemoved => 'Expiry date removed';
+
+  @override
+  String bulkUpdateSuccess(int count, String date) {
+    return '$count codes updated — $date';
+  }
+
+  @override
+  String singleUpdateSuccess(String date) {
+    return 'Updated: $date';
+  }
+
+  @override
+  String get changeGrade => 'Change Academic Stage';
+
+  @override
+  String get gradeUpdateSuccess => 'Academic stage updated successfully';
+
+  @override
+  String get gradeAlreadyCurrent => 'This is already your current stage';
+}

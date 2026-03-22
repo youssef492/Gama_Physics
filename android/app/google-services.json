@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "231417173262",
+    "project_id": "gama-physics",
+    "storage_bucket": "gama-physics.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:231417173262:android:6bd8aa68af16769fb0f35f",
+        "android_client_info": {
+          "package_name": "com.example.gama_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBFBcKfe96hnpOHgW-w-BnWh3hlrw29s28"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

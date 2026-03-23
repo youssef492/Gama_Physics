@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/app_user.dart';
 import '../services/auth_service.dart';
+import '../services/student_local_cache_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -29,7 +30,20 @@ class AuthProvider with ChangeNotifier {
   Future<void> initialize() async {
     final firebaseUser = _authService.currentFirebaseUser;
     if (firebaseUser != null) {
-      _currentUser = await _authService.getUserData(firebaseUser.uid);
+      try {
+        _currentUser = await _authService.getUserData(firebaseUser.uid);
+      } catch (_) {
+        // لو النت فصل، نحاول نرجّع بيانات الطالب من الكاش المحلي.
+        _currentUser = await StudentLocalCacheService.loadStudent();
+      }
+
+      // لو Firestore رجع null (مش موجود/Offline)، كمان جرّب الكاش.
+      _currentUser ??= await StudentLocalCacheService.loadStudent();
+    }
+
+    // لو الكاش فيه بيانات طالب معطّل، اعتبره غير مسجل.
+    if (_currentUser != null && _currentUser!.isDisabled) {
+      _currentUser = null;
     }
     _initialized = true;
     notifyListeners();
@@ -41,9 +55,15 @@ class AuthProvider with ChangeNotifier {
     if (_currentUser!.studentCode.isNotEmpty) return;
 
     final code = _generateCode();
-    await _authService.saveStudentCode(_currentUser!.uid, code);
-    _currentUser = _currentUser!.copyWith(studentCode: code);
-    notifyListeners();
+    try {
+      await _authService.saveStudentCode(_currentUser!.uid, code);
+      _currentUser = _currentUser!.copyWith(studentCode: code);
+      await StudentLocalCacheService.saveStudent(_currentUser!);
+      notifyListeners();
+    } catch (e) {
+      _error = 'تعذر حفظ كود الطالب (جرّب مرة أخرى).';
+      notifyListeners();
+    }
   }
 
   String _generateCode() {
@@ -89,6 +109,9 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
 
+      // احفظ بيانات الطالب محلياً علشان لو النت فصل نقدر نعرض QR والبيانات.
+      await StudentLocalCacheService.saveStudent(_currentUser!);
+
       _isLoading = false;
       notifyListeners();
       return true;
@@ -132,6 +155,10 @@ class AuthProvider with ChangeNotifier {
         password: password,
         grade: grade,
       );
+
+      if (_currentUser != null) {
+        await StudentLocalCacheService.saveStudent(_currentUser!);
+      }
 
       _isLoading = false;
       notifyListeners();

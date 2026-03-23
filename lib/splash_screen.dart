@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../screens/auth/role_selection_screen.dart';
+import '../../screens/student/student_profile_screen.dart';
 import '../../screens/student/student_home_screen.dart';
 import '../../screens/teacher/teacher_dashboard_screen.dart';
 
@@ -136,7 +137,28 @@ class _SplashScreenState extends State<SplashScreen>
     }
 
     if (!isOnline) {
-      if (mounted) setState(() => _state = _SplashState.offline);
+      if (!mounted) return;
+
+      // لو النت فصل: لو المستخدم طالب ومتحقق بالفعل، خليه يروح مباشرة للـ profile
+      // عشان يقدر يشوف QR Code حتى لو Firestore مش شغال.
+      final auth = context.read<AuthProvider>();
+
+      if (!auth.initialized) {
+        // الكاش بيحتاج وقت بسيط من initState؛ ندي فرصة قصيرة.
+        await Future.doWhile(() async {
+          await Future.delayed(const Duration(milliseconds: 100));
+          return !auth.initialized;
+        }).timeout(const Duration(seconds: 3), onTimeout: () {});
+      }
+
+      if (!mounted) return;
+
+      if (auth.isAuthenticated && auth.isStudent) {
+        _navigate(auth, studentToProfile: true);
+        return;
+      }
+
+      setState(() => _state = _SplashState.offline);
       return;
     }
 
@@ -156,13 +178,15 @@ class _SplashScreenState extends State<SplashScreen>
     _navigate(auth);
   }
 
-  void _navigate(AuthProvider auth) {
+  void _navigate(AuthProvider auth, {bool studentToProfile = false}) {
     if (!mounted) return;
     Widget destination;
     if (!auth.isAuthenticated) {
       destination = const RoleSelectionScreen();
     } else if (auth.isTeacher) {
       destination = const TeacherDashboardScreen();
+    } else if (studentToProfile) {
+      destination = const StudentProfileScreen();
     } else {
       destination = const StudentHomeScreen();
     }

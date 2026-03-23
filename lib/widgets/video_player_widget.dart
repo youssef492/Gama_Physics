@@ -69,13 +69,15 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   bool _viewRecorded = false;
 
   static const _speeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
-
+ 
   @override
   void initState() {
     super.initState();
     _player = Player();
     _controller = VideoController(_player);
     _loadVideo();
+    // عدّ المشاهدة عند "دخول" الطالب للصفحة (مرة واحدة لكل Widget instance).
+    WidgetsBinding.instance.addPostFrameCallback((_) => _recordViewOnce());
   }
 
   @override
@@ -173,7 +175,6 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     if (_player.state.playing) {
       _player.pause();
     } else {
-      _recordViewOnce();
       _player.play();
     }
     _resetTimer();
@@ -456,8 +457,12 @@ class _ControlsBar extends StatelessWidget {
     required this.onSliderChangeEnd,
   });
 
-  String _fmt(int s) =>
-      '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
+  String _fmt(int s) {
+    final h = s ~/ 3600;
+    final m = (s % 3600) ~/ 60;
+    final sec = s % 60;
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}';
+  }
 
   @override
   Widget build(BuildContext context) {

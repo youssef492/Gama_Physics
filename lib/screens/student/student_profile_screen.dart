@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:GAMA/l10n/app_localizations.dart';
+import 'package:gama/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../config/theme.dart';

@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'package:GAMA/l10n/app_localizations.dart';
-import 'package:GAMA/services/youtube_service.dart';
-import 'package:GAMA/widgets/video_player_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gama/l10n/app_localizations.dart';
+import 'package:gama/services/youtube_service.dart';
+import 'package:gama/widgets/video_player_widget.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
@@ -18,6 +18,7 @@ class VideoFullScreenScreen extends StatefulWidget {
   final double initialSpeed;
   final String initialQuality;
   final List<YoutubeQualityOption> qualityOptions;
+  final Player? player; // ✅ إضافة دعم تمرير الـ player
 
   // ─── YouTube constructor ────────────────────────────────────────────────
   const VideoFullScreenScreen.youtube({
@@ -28,6 +29,7 @@ class VideoFullScreenScreen extends StatefulWidget {
     this.initialSpeed = 1.0,
     this.initialQuality = 'auto',
     this.qualityOptions = const [],
+    this.player, // ✅
   })  : videoId = videoId,
         embedUrl = null,
         isYoutube = true;
@@ -37,9 +39,10 @@ class VideoFullScreenScreen extends StatefulWidget {
     super.key,
     required String embedUrl,
     required this.title,
+    this.startAt = Duration.zero, // ✅ أضفنا استلام وقت البدء للـ web
+    this.player, // ✅
   })  : embedUrl = embedUrl,
         videoId = null,
-        startAt = Duration.zero,
         isYoutube = false,
         initialSpeed = 1.0,
         initialQuality = 'auto',
@@ -75,16 +78,29 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
     _selectedQualityLabel = widget.initialQuality;
     _qualityOptions = widget.qualityOptions;
     _forceLandscape();
-    _player = Player();
+
+    // ✅ لو في player ممرر، استخدمه. غير كده انشئ واحد جديد.
+    _player = widget.player ?? Player();
     _controller = VideoController(_player);
-    _loadVideo();
+
+    if (widget.player == null) {
+      _loadVideo();
+    } else {
+      // لو ممرر، هو شغال فعلاً فبلاش loading
+      _isLoading = false;
+      // تأكد أن الـ rate مظبوط
+      _player.setRate(_speed);
+    }
   }
 
   @override
   void dispose() {
     _hideTimer?.cancel();
     _seekHintTimer?.cancel();
-    _player.dispose();
+    // ✅ احذف الـ player لو كنت أنت اللي منشئه بس
+    if (widget.player == null) {
+      _player.dispose();
+    }
     _restoreOrientation();
     super.dispose();
   }

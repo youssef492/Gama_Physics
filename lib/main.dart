@@ -1,9 +1,10 @@
-import 'package:GAMA/l10n/app_localizations.dart';
-import 'package:GAMA/splash_screen.dart';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:gama/l10n/app_localizations.dart';
+import 'package:gama/splash_screen.dart';
 
 import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';

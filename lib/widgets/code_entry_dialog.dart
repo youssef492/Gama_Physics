@@ -1,4 +1,4 @@
-import 'package:GAMA/l10n/app_localizations.dart';
+import 'package:gama/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
 

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:GAMA/l10n/app_localizations.dart';
+import 'package:gama/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/data_provider.dart';
 import '../../models/lesson.dart';
+import '../../services/video_view_service.dart';
 import '../../widgets/lesson_card.dart';
 
 class ManageLessonsScreen extends StatefulWidget {
@@ -18,6 +19,9 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
   String? semesterId;
   String? semesterName;
 
+  // cache عدد المشاهدين لكل درس عشان ما نعملش request كل rebuild
+  final Map<String, int> _viewerCounts = {};
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -31,10 +35,27 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
     }
   }
 
+  // نجيب عدد المشاهدين لكل درس بعد ما الـ lessons تتحمل
+  Future<void> _loadViewerCounts(List<Lesson> lessons) async {
+    for (final lesson in lessons) {
+      if (!_viewerCounts.containsKey(lesson.id)) {
+        final count = await VideoViewService.getUniqueViewersCount(lesson.id);
+        if (mounted) {
+          setState(() => _viewerCounts[lesson.id] = count);
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final data = context.watch<DataProvider>();
+
+    // نحمّل عدد المشاهدين لأي درس جديد
+    if (data.lessons.isNotEmpty) {
+      _loadViewerCounts(data.lessons);
+    }
 
     return Scaffold(
       appBar: AppBar(title: Text('${l10n.lessons}: ${semesterName ?? ''}')),
@@ -51,6 +72,8 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
               itemCount: data.lessons.length,
               itemBuilder: (context, index) {
                 final lesson = data.lessons[index];
+                final viewerCount = _viewerCounts[lesson.id];
+
                 return LessonCard(
                   lesson: lesson,
                   showVisibility: true,
@@ -59,12 +82,23 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // ─── زرار المشاهدين ────────────────────────────────
+                      _ViewersButton(
+                        count: viewerCount,
+                        onTap: () => Navigator.pushNamed(
+                          context,
+                          '/lesson-viewers',
+                          arguments: lesson,
+                        ),
+                      ),
+                      // ─── Toggle visibility ─────────────────────────────
                       Switch(
                         value: lesson.isVisible,
                         onChanged: (value) =>
                             data.toggleLessonVisibility(lesson.id, value),
                         activeThumbColor: AppTheme.successGreen,
                       ),
+                      // ─── Delete ────────────────────────────────────────
                       IconButton(
                         icon:
                             const Icon(Icons.delete, color: AppTheme.errorRed),
@@ -231,6 +265,52 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
             child: Text(l10n.delete),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Viewers Button Widget ────────────────────────────────────────────────────
+class _ViewersButton extends StatelessWidget {
+  final int? count;
+  final VoidCallback onTap;
+
+  const _ViewersButton({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryBlue.withAlpha(15),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppTheme.primaryBlue.withAlpha(40)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.remove_red_eye_outlined,
+                size: 14, color: AppTheme.primaryBlue),
+            const SizedBox(width: 4),
+            count == null
+                ? const SizedBox(
+                    width: 10,
+                    height: 10,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 1.5, color: AppTheme.primaryBlue),
+                  )
+                : Text(
+                    '$count',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primaryBlue,
+                    ),
+                  ),
+          ],
+        ),
       ),
     );
   }

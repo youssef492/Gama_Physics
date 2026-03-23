@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:GAMA/l10n/app_localizations.dart';
+import 'package:gama/l10n/app_localizations.dart';
+import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/lesson.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/video_player_widget.dart';
 
-class LessonDetailScreen extends StatelessWidget {
+class LessonDetailScreen extends StatefulWidget {
   const LessonDetailScreen({super.key});
+
+  @override
+  State<LessonDetailScreen> createState() => _LessonDetailScreenState();
+}
+
+class _LessonDetailScreenState extends State<LessonDetailScreen> {
+  // ❌ حذفنا _recordView - التسجيل يحصل في video_player_widget فقط
 
   @override
   Widget build(BuildContext context) {
@@ -19,39 +28,29 @@ class LessonDetailScreen extends StatelessWidget {
       );
     }
 
-    return _LessonDetailView(lesson: lesson, l10n: l10n);
-  }
-}
+    // ✅ نجيب بيانات الطالب مرة واحدة هنا
+    final auth = context.read<AuthProvider>();
+    final user = auth.currentUser;
+    final isStudent = auth.isStudent;
 
-class _LessonDetailView extends StatefulWidget {
-  final Lesson lesson;
-  final AppLocalizations l10n;
-
-  const _LessonDetailView({
-    required this.lesson,
-    required this.l10n,
-  });
-
-  @override
-  State<_LessonDetailView> createState() => _LessonDetailViewState();
-}
-
-class _LessonDetailViewState extends State<_LessonDetailView> {
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
-      // AppBar دايماً موجود - مش بنشيله
-      appBar: AppBar(title: Text(widget.lesson.title)),
+      appBar: AppBar(title: Text(lesson.title)),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // VideoPlayerWidget بيتعمل مرة واحدة بس ومش بيتعمل recreate
+            // ✅ نمرر بيانات الطالب للـ video player
             VideoPlayerWidget(
-              embedUrl: widget.lesson.videoUrl,
-              videoType: widget.lesson.videoType,
-              title: widget.lesson.title,
-              rawVideoUrl: widget.lesson.videoUrl,
+              embedUrl: lesson.videoUrl,
+              videoType: lesson.videoType,
+              title: lesson.title,
+              rawVideoUrl: lesson.videoUrl,
+              // ✅ التسجيل يحصل هنا في video_player فقط
+              lessonId: isStudent ? lesson.id : '',
+              studentId: isStudent && user != null ? user.uid : '',
+              studentName: isStudent && user != null ? user.name : '',
+              studentPhone: isStudent && user != null ? user.phone : '',
+              studentGrade: isStudent && user != null ? user.grade : '',
             ),
             Padding(
               padding: const EdgeInsets.all(20),
@@ -62,7 +61,7 @@ class _LessonDetailViewState extends State<_LessonDetailView> {
                     children: [
                       Expanded(
                         child: Text(
-                          widget.lesson.title,
+                          lesson.title,
                           style: Theme.of(context)
                               .textTheme
                               .titleLarge
@@ -73,17 +72,15 @@ class _LessonDetailViewState extends State<_LessonDetailView> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: widget.lesson.isFree
+                          color: lesson.isFree
                               ? AppTheme.freeGreen.withAlpha(25)
                               : AppTheme.paidOrange.withAlpha(25),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          widget.lesson.isFree
-                              ? widget.l10n.free
-                              : widget.l10n.paid,
+                          lesson.isFree ? l10n.free : l10n.paid,
                           style: TextStyle(
-                            color: widget.lesson.isFree
+                            color: lesson.isFree
                                 ? AppTheme.freeGreen
                                 : AppTheme.paidOrange,
                             fontWeight: FontWeight.w600,
@@ -93,7 +90,7 @@ class _LessonDetailViewState extends State<_LessonDetailView> {
                       ),
                     ],
                   ),
-                  if (widget.lesson.description.isNotEmpty) ...[
+                  if (lesson.description.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Container(
                       width: double.infinity,
@@ -113,7 +110,7 @@ class _LessonDetailViewState extends State<_LessonDetailView> {
                                   size: 18, color: AppTheme.primaryBlue),
                               const SizedBox(width: 6),
                               Text(
-                                widget.l10n.lessonDescription,
+                                l10n.lessonDescription,
                                 style: const TextStyle(
                                     fontWeight: FontWeight.w600,
                                     color: AppTheme.primaryBlue),
@@ -122,7 +119,7 @@ class _LessonDetailViewState extends State<_LessonDetailView> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            widget.lesson.description,
+                            lesson.description,
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium

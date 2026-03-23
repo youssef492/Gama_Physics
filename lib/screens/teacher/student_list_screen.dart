@@ -1,7 +1,8 @@
-import 'package:GAMA/l10n/app_localizations.dart';
-import 'package:GAMA/services/student_excel_service.dart';
-import 'package:GAMA/services/student_pdf_secvice.dart';
+
 import 'package:flutter/material.dart';
+import 'package:gama/l10n/app_localizations.dart';
+import 'package:gama/services/student_excel_service.dart';
+import 'package:gama/services/student_pdf_secvice.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../config/theme.dart';

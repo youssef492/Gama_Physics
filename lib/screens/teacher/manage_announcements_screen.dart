@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:GAMA/l10n/app_localizations.dart';
+import 'package:gama/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../config/theme.dart';

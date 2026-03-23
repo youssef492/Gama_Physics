@@ -1,14 +1,22 @@
 import 'dart:async';
-import 'package:GAMA/l10n/app_localizations.dart';
-import 'package:GAMA/services/youtube_service.dart';
 import 'package:flutter/material.dart';
+import 'package:gama/l10n/app_localizations.dart';
+import 'package:gama/services/video_view_service.dart';
+import 'package:gama/services/youtube_service.dart';
+import 'package:gama/screens/student/video_full_screen.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 enum SeekDirection { forward, backward }
 
-// ─── Video load state ─────────────────────────────────────────────────────────
-enum _VideoLoadState { fetchingUrl, buffering, ready, errorOffline, errorOther }
+enum _VideoLoadState {
+  fetchingUrl,
+  buffering,
+  ready,
+  errorSlow,
+  errorOffline,
+  errorOther
+}
 
 const _kPrimary = Color(0xFF0D6EBE);
 
@@ -21,12 +29,24 @@ class VideoPlayerWidget extends StatefulWidget {
   final String videoType;
   final String rawVideoUrl;
 
+  // بيانات المشاهدة — اختيارية (مش موجودة في شاشة المدرس)
+  final String lessonId;
+  final String studentId;
+  final String studentName;
+  final String studentPhone;
+  final String studentGrade;
+
   const VideoPlayerWidget({
     super.key,
     required this.embedUrl,
     required this.title,
     required this.videoType,
     required this.rawVideoUrl,
+    this.lessonId = '',
+    this.studentId = '',
+    this.studentName = '',
+    this.studentPhone = '',
+    this.studentGrade = '',
   });
 
   @override
@@ -46,6 +66,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   List<YoutubeQualityOption> _qualityOptions = [];
   String _selectedQualityLabel = 'auto';
 
+  bool _viewRecorded = false;
+
   static const _speeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
 
   @override
@@ -64,16 +86,20 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     super.dispose();
   }
 
-  // ─── Load video ─────────────────────────────────────────────────────────────
   Future<void> _loadVideo() async {
     if (!mounted) return;
     setState(() => _loadState = _VideoLoadState.fetchingUrl);
 
+    await Future.delayed(const Duration(milliseconds: 150));
+    if (!mounted) return;
+
     try {
       String url;
       if (widget.videoType == 'youtube') {
-        // Step 1: جيب الـ URL (من cache أو network)
-        final result = await YoutubeService.getStreamUrl(widget.rawVideoUrl);
+        final result = await YoutubeService.getStreamUrl(
+          widget.rawVideoUrl,
+          retryCount: 2,
+        );
         _qualityOptions = result.allStreams;
         if (_qualityOptions.isNotEmpty) {
           _selectedQualityLabel = _qualityOptions.first.label;
@@ -84,31 +110,27 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       }
 
       if (!mounted) return;
-      // Step 2: الـ media_kit يبدأ يحمل
       setState(() => _loadState = _VideoLoadState.buffering);
-
       await _player.open(Media(url), play: false);
 
-      // نستنى الـ buffering يخلص
-      _player.stream.buffering.listen((buffering) {
-        if (!buffering && mounted && _loadState == _VideoLoadState.buffering) {
+      _player.stream.buffering.listen((b) {
+        if (!b && mounted && _loadState == _VideoLoadState.buffering) {
           setState(() => _loadState = _VideoLoadState.ready);
         }
       });
-
-      // fallback: لو ما اشتغلش الـ stream بعد 3 ثواني نعتبره ready
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted && _loadState == _VideoLoadState.buffering) {
           setState(() => _loadState = _VideoLoadState.ready);
         }
       });
     } on TimeoutException {
-      if (mounted) setState(() => _loadState = _VideoLoadState.errorOffline);
+      if (mounted) setState(() => _loadState = _VideoLoadState.errorSlow);
     } catch (e) {
       if (!mounted) return;
       final msg = e.toString().toLowerCase();
-      if (msg.contains('timeout') ||
-          msg.contains('socket') ||
+      if (msg.contains('slow_connection')) {
+        setState(() => _loadState = _VideoLoadState.errorSlow);
+      } else if (msg.contains('socket') ||
           msg.contains('network') ||
           msg.contains('connection')) {
         setState(() => _loadState = _VideoLoadState.errorOffline);
@@ -118,7 +140,21 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     }
   }
 
-  // ─── Controls logic ─────────────────────────────────────────────────────────
+  void _recordViewOnce() {
+    if (_viewRecorded) return;
+    if (widget.lessonId.isEmpty) return;
+    if (widget.studentId.isEmpty) return;
+
+    _viewRecorded = true;
+    VideoViewService.recordView(
+      lessonId: widget.lessonId,
+      studentId: widget.studentId,
+      studentName: widget.studentName,
+      studentPhone: widget.studentPhone,
+      studentGrade: widget.studentGrade,
+    );
+  }
+
   void _toggleControls() {
     setState(() => _showControls = !_showControls);
     if (_showControls) _resetTimer();
@@ -134,7 +170,12 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   void _keepVisible() => _hideTimer?.cancel();
 
   void _togglePlayPause() {
-    _player.state.playing ? _player.pause() : _player.play();
+    if (_player.state.playing) {
+      _player.pause();
+    } else {
+      _recordViewOnce();
+      _player.play();
+    }
     _resetTimer();
   }
 
@@ -181,27 +222,31 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   Future<void> _openFullScreen() async {
     final pos = _player.state.position;
-    final wasPlaying = _player.state.playing;
-    await _player.pause();
+
     setState(() => _showControls = false);
     _hideTimer?.cancel();
 
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => VideoFullScreenMediaKit(
-          rawUrl: widget.rawVideoUrl,
-          videoType: widget.videoType,
-          title: widget.title,
-          startAt: pos,
-          initialSpeed: _playbackSpeed,
-          qualityOptions: _qualityOptions,
-          selectedQuality: _selectedQualityLabel,
-        ),
+        builder: (_) => widget.videoType == 'youtube'
+            ? VideoFullScreenScreen.youtube(
+                videoId: YoutubeService.extractVideoId(widget.rawVideoUrl),
+                title: widget.title,
+                startAt: pos,
+                initialSpeed: _playbackSpeed,
+                initialQuality: _selectedQualityLabel,
+                qualityOptions: _qualityOptions,
+                player: _player,
+              )
+            : VideoFullScreenScreen.web(
+                embedUrl: widget.embedUrl,
+                title: widget.title,
+                startAt: pos,
+                player: _player,
+              ),
       ),
     );
-
-    if (wasPlaying && mounted) _player.play();
   }
 
   void _showSpeedPicker() {
@@ -229,96 +274,74 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     );
   }
 
-  // ─── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return AspectRatio(
       aspectRatio: 16 / 9,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Video (دايماً موجود في الخلفية)
-          Video(
-            controller: _controller,
-            controls: NoVideoControls,
-            fit: BoxFit.contain,
-          ),
-
-          // ─── Overlay حسب الـ state ────────────────────────────────────────
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: _buildStateOverlay(),
-          ),
-
-          // ─── Tap zones ────────────────────────────────────────────────────
-          if (_loadState == _VideoLoadState.ready)
-            Directionality(
-              textDirection: TextDirection.ltr,
-              child: Row(
-                children: [
+      child: Container(
+        color: Colors.black,
+        child: Stack(
+          children: [
+            if (_loadState == _VideoLoadState.ready)
+              Video(controller: _controller, controls: NoVideoControls),
+            _buildOverlay(),
+            if (_loadState == _VideoLoadState.ready)
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: Row(children: [
                   Expanded(
                       child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onTap: _toggleControls,
-                    onDoubleTap: _seekBackward,
-                  )),
+                          behavior: HitTestBehavior.translucent,
+                          onTap: _toggleControls,
+                          onDoubleTap: _seekBackward)),
                   Expanded(
                       child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onTap: _toggleControls,
-                    onDoubleTap: _seekForward,
-                  )),
-                ],
+                          behavior: HitTestBehavior.translucent,
+                          onTap: _toggleControls,
+                          onDoubleTap: _seekForward)),
+                ]),
               ),
-            ),
-
-          // ─── Seek hint ────────────────────────────────────────────────────
-          if (_seekHint != null)
-            Directionality(
-              textDirection: TextDirection.ltr,
-              child: SeekHintOverlay(direction: _seekHint!),
-            ),
-
-          // ─── Controls overlay ─────────────────────────────────────────────
-          if (_loadState == _VideoLoadState.ready)
-            AnimatedOpacity(
-              opacity: _showControls ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 200),
-              child: IgnorePointer(
-                ignoring: !_showControls,
-                child: StreamBuilder<bool>(
-                  stream: _player.stream.playing,
-                  initialData: false,
-                  builder: (_, playSnap) {
-                    final isPlaying = playSnap.data ?? false;
-                    return StreamBuilder<Duration>(
-                      stream: _player.stream.position,
-                      initialData: Duration.zero,
-                      builder: (_, posSnap) {
-                        final pos = posSnap.data ?? Duration.zero;
-                        final dur = _player.state.duration;
-                        final progress = dur.inMilliseconds > 0
-                            ? (pos.inMilliseconds / dur.inMilliseconds)
-                                .clamp(0.0, 1.0)
-                            : 0.0;
-                        return Stack(
-                          fit: StackFit.expand,
-                          children: [
+            if (_seekHint != null)
+              Directionality(
+                textDirection: TextDirection.ltr,
+                child: SeekHintOverlay(direction: _seekHint!),
+              ),
+            if (_loadState == _VideoLoadState.ready)
+              AnimatedOpacity(
+                opacity: _showControls ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                child: IgnorePointer(
+                  ignoring: !_showControls,
+                  child: StreamBuilder<bool>(
+                    stream: _player.stream.playing,
+                    initialData: false,
+                    builder: (_, playSnap) {
+                      final isPlaying = playSnap.data ?? false;
+                      return StreamBuilder<Duration>(
+                        stream: _player.stream.position,
+                        initialData: Duration.zero,
+                        builder: (_, posSnap) {
+                          final pos = posSnap.data ?? Duration.zero;
+                          final dur = _player.state.duration;
+                          final progress = dur.inMilliseconds > 0
+                              ? (pos.inMilliseconds / dur.inMilliseconds)
+                                  .clamp(0.0, 1.0)
+                              : 0.0;
+                          return Stack(fit: StackFit.expand, children: [
                             Center(
                               child: GestureDetector(
                                 onTap: _togglePlayPause,
                                 child: Container(
-                                  padding: const EdgeInsets.all(12),
+                                  padding: const EdgeInsets.all(14),
                                   decoration: const BoxDecoration(
                                       color: Colors.black45,
                                       shape: BoxShape.circle),
                                   child: Icon(
-                                    isPlaying
-                                        ? Icons.pause_rounded
-                                        : Icons.play_arrow_rounded,
-                                    color: Colors.white,
-                                    size: 36,
-                                  ),
+                                      isPlaying
+                                          ? Icons.pause_rounded
+                                          : Icons.play_arrow_rounded,
+                                      color: Colors.white,
+                                      size: 40),
                                 ),
                               ),
                             ),
@@ -341,10 +364,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                                       : null,
                                   onSliderChanged: (v) {
                                     _player.seek(Duration(
-                                        milliseconds: (v *
-                                                _player.state.duration
-                                                    .inMilliseconds)
-                                            .round()));
+                                        milliseconds:
+                                            (v * dur.inMilliseconds).round()));
                                     _resetTimer();
                                   },
                                   onSliderChangeStart: (_) => _keepVisible(),
@@ -352,500 +373,15 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                                 ),
                               ),
                             ),
-                          ],
-                        );
-                      },
-                    );
-                  },
+                          ]);
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // ─── State overlays ──────────────────────────────────────────────────────────
-  Widget _buildStateOverlay() {
-    switch (_loadState) {
-      case _VideoLoadState.fetchingUrl:
-        return _LoadingOverlay(
-          key: const ValueKey('fetchingUrl'),
-          message: 'جارٍ تجهيز الفيديو...',
-        );
-      case _VideoLoadState.buffering:
-        return _LoadingOverlay(
-          key: const ValueKey('buffering'),
-          message: 'جارٍ التحميل...',
-        );
-      case _VideoLoadState.errorOffline:
-        return _ErrorOverlay(
-          key: const ValueKey('offline'),
-          icon: Icons.wifi_off_rounded,
-          title: 'لا يوجد اتصال بالإنترنت',
-          subtitle: 'تحقق من الاتصال وحاول مرة أخرى',
-          onRetry: _loadVideo,
-        );
-      case _VideoLoadState.errorOther:
-        return _ErrorOverlay(
-          key: const ValueKey('error'),
-          icon: Icons.play_circle_outline_rounded,
-          title: 'تعذر تشغيل الفيديو',
-          subtitle: 'حاول مرة أخرى',
-          onRetry: _loadVideo,
-        );
-      case _VideoLoadState.ready:
-        return const SizedBox.shrink(key: ValueKey('ready'));
-    }
-  }
-}
-
-// ─── Loading Overlay ──────────────────────────────────────────────────────────
-class _LoadingOverlay extends StatelessWidget {
-  final String message;
-  const _LoadingOverlay({super.key, required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black87,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(
-              width: 36,
-              height: 36,
-              child: CircularProgressIndicator(
-                color: _kPrimary,
-                strokeWidth: 3,
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              message,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 13,
-                fontFamily: 'Cairo',
-              ),
-            ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ─── Error Overlay ────────────────────────────────────────────────────────────
-class _ErrorOverlay extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onRetry;
-
-  const _ErrorOverlay({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onRetry,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black87,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white38, size: 48),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'Cairo',
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-            const SizedBox(height: 20),
-            GestureDetector(
-              onTap: onRetry,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                decoration: BoxDecoration(
-                  color: _kPrimary,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.refresh_rounded, color: Colors.white, size: 16),
-                    SizedBox(width: 6),
-                    Text(
-                      'إعادة المحاولة',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Cairo',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Fullscreen screen
-// ─────────────────────────────────────────────────────────────────────────────
-class VideoFullScreenMediaKit extends StatefulWidget {
-  final String rawUrl;
-  final String videoType;
-  final String title;
-  final Duration startAt;
-  final double initialSpeed;
-  final List<YoutubeQualityOption> qualityOptions;
-  final String selectedQuality;
-
-  const VideoFullScreenMediaKit({
-    super.key,
-    required this.rawUrl,
-    required this.videoType,
-    required this.title,
-    required this.startAt,
-    required this.initialSpeed,
-    required this.qualityOptions,
-    required this.selectedQuality,
-  });
-
-  @override
-  State<VideoFullScreenMediaKit> createState() =>
-      _VideoFullScreenMediaKitState();
-}
-
-class _VideoFullScreenMediaKitState extends State<VideoFullScreenMediaKit> {
-  late final Player _player;
-  late final VideoController _controller;
-
-  _VideoLoadState _loadState = _VideoLoadState.fetchingUrl;
-  bool _showControls = false;
-  Timer? _hideTimer;
-  double _playbackSpeed = 1.0;
-  String _selectedQualityLabel = 'auto';
-  SeekDirection? _seekHint;
-  Timer? _seekHintTimer;
-
-  static const _speeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
-
-  @override
-  void initState() {
-    super.initState();
-    _playbackSpeed = widget.initialSpeed;
-    _selectedQualityLabel = widget.selectedQuality;
-    _player = Player();
-    _controller = VideoController(_player);
-    _loadAndSeek();
-  }
-
-  Future<void> _loadAndSeek() async {
-    if (!mounted) return;
-    setState(() => _loadState = _VideoLoadState.fetchingUrl);
-    try {
-      String url;
-      if (widget.videoType == 'youtube') {
-        final chosen = widget.qualityOptions
-            .where((q) => q.label == widget.selectedQuality)
-            .firstOrNull;
-        if (chosen != null) {
-          url = chosen.url;
-          setState(() => _loadState = _VideoLoadState.buffering);
-        } else {
-          final result = await YoutubeService.getStreamUrl(widget.rawUrl);
-          url = result.streamUrl;
-          setState(() => _loadState = _VideoLoadState.buffering);
-        }
-      } else {
-        url = widget.rawUrl;
-        setState(() => _loadState = _VideoLoadState.buffering);
-      }
-
-      await _player.open(Media(url), play: true);
-      await _player.seek(widget.startAt);
-      await _player.setRate(_playbackSpeed);
-
-      _player.stream.buffering.listen((buffering) {
-        if (!buffering && mounted && _loadState == _VideoLoadState.buffering) {
-          setState(() => _loadState = _VideoLoadState.ready);
-        }
-      });
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted && _loadState == _VideoLoadState.buffering) {
-          setState(() => _loadState = _VideoLoadState.ready);
-        }
-      });
-    } on TimeoutException {
-      if (mounted) setState(() => _loadState = _VideoLoadState.errorOffline);
-    } catch (e) {
-      if (!mounted) return;
-      final msg = e.toString().toLowerCase();
-      if (msg.contains('timeout') ||
-          msg.contains('socket') ||
-          msg.contains('network')) {
-        setState(() => _loadState = _VideoLoadState.errorOffline);
-      } else {
-        setState(() => _loadState = _VideoLoadState.errorOther);
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _hideTimer?.cancel();
-    _seekHintTimer?.cancel();
-    _player.dispose();
-    super.dispose();
-  }
-
-  void _toggleControls() {
-    setState(() => _showControls = !_showControls);
-    if (_showControls) _resetTimer();
-  }
-
-  void _resetTimer() {
-    _hideTimer?.cancel();
-    _hideTimer = Timer(const Duration(seconds: 4), () {
-      if (mounted) setState(() => _showControls = false);
-    });
-  }
-
-  void _keepVisible() => _hideTimer?.cancel();
-  void _togglePlayPause() {
-    _player.state.playing ? _player.pause() : _player.play();
-    _resetTimer();
-  }
-
-  void _seekBackward() {
-    final pos = _player.state.position - const Duration(seconds: 10);
-    _player.seek(pos.isNegative ? Duration.zero : pos);
-    _showSeekHintAnim(SeekDirection.backward);
-    _resetTimer();
-  }
-
-  void _seekForward() {
-    _player.seek(_player.state.position + const Duration(seconds: 10));
-    _showSeekHintAnim(SeekDirection.forward);
-    _resetTimer();
-  }
-
-  void _showSeekHintAnim(SeekDirection dir) {
-    setState(() => _seekHint = dir);
-    _seekHintTimer?.cancel();
-    _seekHintTimer = Timer(const Duration(milliseconds: 700), () {
-      if (mounted) setState(() => _seekHint = null);
-    });
-  }
-
-  void _setSpeed(double s) {
-    setState(() => _playbackSpeed = s);
-    _player.setRate(s);
-    _resetTimer();
-  }
-
-  void _showSpeedPicker() {
-    _keepVisible();
-    final l10n = AppLocalizations.of(context)!;
-    showVideoOptionsSheet(
-      context: context,
-      title: l10n.playbackSpeed,
-      items: _speeds.map((s) => '${s}x').toList(),
-      selected: '${_playbackSpeed}x',
-      onSelect: (i) => _setSpeed(_speeds[i]),
-    );
-  }
-
-  void _showQualityPicker() {
-    if (widget.qualityOptions.isEmpty) return;
-    _keepVisible();
-    final l10n = AppLocalizations.of(context)!;
-    showVideoOptionsSheet(
-      context: context,
-      title: l10n.videoQuality,
-      items: widget.qualityOptions.map((q) => q.label).toList(),
-      selected: _selectedQualityLabel,
-      onSelect: (i) async {
-        final option = widget.qualityOptions[i];
-        setState(() {
-          _selectedQualityLabel = option.label;
-          _loadState = _VideoLoadState.buffering;
-        });
-        final pos = _player.state.position;
-        final wasPlaying = _player.state.playing;
-        await _player.open(Media(option.url), play: false);
-        await _player.seek(pos);
-        if (wasPlaying) await _player.play();
-        if (mounted) setState(() => _loadState = _VideoLoadState.ready);
-        _resetTimer();
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Video(
-              controller: _controller,
-              controls: NoVideoControls,
-              fit: BoxFit.contain),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: _buildOverlay(),
-          ),
-          if (_loadState == _VideoLoadState.ready)
-            Directionality(
-              textDirection: TextDirection.ltr,
-              child: Row(children: [
-                Expanded(
-                    child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onTap: _toggleControls,
-                        onDoubleTap: _seekBackward)),
-                Expanded(
-                    child: GestureDetector(
-                        behavior: HitTestBehavior.translucent,
-                        onTap: _toggleControls,
-                        onDoubleTap: _seekForward)),
-              ]),
-            ),
-          if (_seekHint != null)
-            Directionality(
-              textDirection: TextDirection.ltr,
-              child: SeekHintOverlay(direction: _seekHint!),
-            ),
-          if (_loadState == _VideoLoadState.ready)
-            AnimatedOpacity(
-              opacity: _showControls ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 200),
-              child: IgnorePointer(
-                ignoring: !_showControls,
-                child: StreamBuilder<bool>(
-                  stream: _player.stream.playing,
-                  initialData: false,
-                  builder: (_, playSnap) {
-                    final isPlaying = playSnap.data ?? false;
-                    return StreamBuilder<Duration>(
-                      stream: _player.stream.position,
-                      initialData: Duration.zero,
-                      builder: (_, posSnap) {
-                        final pos = posSnap.data ?? Duration.zero;
-                        final dur = _player.state.duration;
-                        final progress = dur.inMilliseconds > 0
-                            ? (pos.inMilliseconds / dur.inMilliseconds)
-                                .clamp(0.0, 1.0)
-                            : 0.0;
-                        return Stack(fit: StackFit.expand, children: [
-                          Positioned(
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            child: Container(
-                              decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                    Colors.black87,
-                                    Colors.transparent
-                                  ])),
-                              padding: const EdgeInsets.fromLTRB(4, 8, 16, 20),
-                              child: Row(children: [
-                                IconButton(
-                                    icon: const Icon(Icons.arrow_back_rounded,
-                                        color: Colors.white, size: 22),
-                                    onPressed: () => Navigator.pop(context)),
-                                Expanded(
-                                    child: Text(widget.title,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600))),
-                              ]),
-                            ),
-                          ),
-                          Center(
-                            child: GestureDetector(
-                              onTap: _togglePlayPause,
-                              child: Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: const BoxDecoration(
-                                    color: Colors.black45,
-                                    shape: BoxShape.circle),
-                                child: Icon(
-                                    isPlaying
-                                        ? Icons.pause_rounded
-                                        : Icons.play_arrow_rounded,
-                                    color: Colors.white,
-                                    size: 40),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            left: 0,
-                            right: 0,
-                            child: Directionality(
-                              textDirection: TextDirection.ltr,
-                              child: _ControlsBarFS(
-                                progress: progress.toDouble(),
-                                currentSec: pos.inSeconds,
-                                totalSec: dur.inSeconds,
-                                speed: _playbackSpeed,
-                                qualityLabel: _selectedQualityLabel,
-                                onExit: () => Navigator.pop(context),
-                                onSpeedTap: _showSpeedPicker,
-                                onQualityTap: widget.qualityOptions.isNotEmpty
-                                    ? _showQualityPicker
-                                    : null,
-                                onSliderChanged: (v) {
-                                  _player.seek(Duration(
-                                      milliseconds:
-                                          (v * dur.inMilliseconds).round()));
-                                  _resetTimer();
-                                },
-                                onSliderChangeStart: (_) => _keepVisible(),
-                                onSliderChangeEnd: (_) => _resetTimer(),
-                              ),
-                            ),
-                          ),
-                        ]);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ),
-        ],
       ),
     );
   }
@@ -854,34 +390,47 @@ class _VideoFullScreenMediaKitState extends State<VideoFullScreenMediaKit> {
     switch (_loadState) {
       case _VideoLoadState.fetchingUrl:
         return _LoadingOverlay(
-            key: const ValueKey('fetchingUrl'),
-            message: 'جارٍ تجهيز الفيديو...');
+          key: const ValueKey('fetch'),
+          message: 'جاري تجهيز الفيديو',
+        );
       case _VideoLoadState.buffering:
         return _LoadingOverlay(
-            key: const ValueKey('buffering'), message: 'جارٍ التحميل...');
+          key: const ValueKey('buffer'),
+          message: 'جاري التحميل',
+          progressStream: _player.stream.buffer.map((buf) {
+            final dur = _player.state.duration;
+            if (dur.inMilliseconds == 0) return 0.0;
+            return (buf.inMilliseconds / dur.inMilliseconds).clamp(0.0, 1.0);
+          }),
+        );
+      case _VideoLoadState.errorSlow:
+        return _ErrorOverlay(
+            key: const ValueKey('slow'),
+            icon: Icons.signal_cellular_alt_rounded,
+            title: 'الشبكة بطيئة',
+            subtitle: 'النت بطيء شوية، حاول تاني أو انتظر',
+            onRetry: _loadVideo);
       case _VideoLoadState.errorOffline:
         return _ErrorOverlay(
-          key: const ValueKey('offline'),
-          icon: Icons.wifi_off_rounded,
-          title: 'لا يوجد اتصال بالإنترنت',
-          subtitle: 'تحقق من الاتصال وحاول مرة أخرى',
-          onRetry: _loadAndSeek,
-        );
+            key: const ValueKey('offline'),
+            icon: Icons.wifi_off_rounded,
+            title: 'لا يوجد اتصال بالإنترنت',
+            subtitle: 'تحقق من الاتصال وحاول مرة أخرى',
+            onRetry: _loadVideo);
       case _VideoLoadState.errorOther:
         return _ErrorOverlay(
-          key: const ValueKey('error'),
-          icon: Icons.play_circle_outline_rounded,
-          title: 'تعذر تشغيل الفيديو',
-          subtitle: 'حاول مرة أخرى',
-          onRetry: _loadAndSeek,
-        );
+            key: const ValueKey('error'),
+            icon: Icons.play_circle_outline_rounded,
+            title: 'تعذر تشغيل الفيديو',
+            subtitle: 'حاول مرة أخرى',
+            onRetry: _loadVideo);
       case _VideoLoadState.ready:
         return const SizedBox.shrink(key: ValueKey('ready'));
     }
   }
 }
 
-// ─── Controls Bar (mini) ──────────────────────────────────────────────────────
+// ─── Controls Bar ─────────────────────────────────────────────────────────────
 class _ControlsBar extends StatelessWidget {
   final double progress;
   final int currentSec, totalSec;
@@ -930,7 +479,7 @@ class _ControlsBar extends StatelessWidget {
                 activeTrackColor: _kPrimary,
                 inactiveTrackColor: Colors.white30,
                 thumbColor: _kPrimary,
-                overlayColor: Color(0x330D6EBE),
+                overlayColor: const Color(0x330D6EBE),
               ),
               child: Slider(
                   value: progress,
@@ -961,85 +510,155 @@ class _ControlsBar extends StatelessWidget {
   }
 }
 
-// ─── Controls Bar (fullscreen) ────────────────────────────────────────────────
-class _ControlsBarFS extends StatelessWidget {
-  final double progress;
-  final int currentSec, totalSec;
-  final double speed;
-  final String qualityLabel;
-  final VoidCallback onExit, onSpeedTap;
-  final VoidCallback? onQualityTap;
-  final ValueChanged<double> onSliderChanged,
-      onSliderChangeStart,
-      onSliderChangeEnd;
+// ─── Loading Overlay (المعدل الرئيسي) ─────────────────────────────────────────
+class _LoadingOverlay extends StatefulWidget {
+  final String message;
+  final Stream<double>? progressStream;
 
-  const _ControlsBarFS({
-    required this.progress,
-    required this.currentSec,
-    required this.totalSec,
-    required this.speed,
-    required this.qualityLabel,
-    required this.onExit,
-    required this.onSpeedTap,
-    required this.onQualityTap,
-    required this.onSliderChanged,
-    required this.onSliderChangeStart,
-    required this.onSliderChangeEnd,
+  const _LoadingOverlay({
+    super.key,
+    required this.message,
+    this.progressStream,
   });
 
-  String _fmt(int s) =>
-      '${(s ~/ 60).toString().padLeft(2, '0')}:${(s % 60).toString().padLeft(2, '0')}';
+  @override
+  State<_LoadingOverlay> createState() => _LoadingOverlayState();
+}
+
+class _LoadingOverlayState extends State<_LoadingOverlay>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _fakeController;
+  late Animation<double> _fakeProgress;
+
+  @override
+  void initState() {
+    super.initState();
+    _fakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8), // → ~92% في 8 ثواني
+    );
+
+    _fakeProgress = Tween<double>(begin: 0.0, end: 0.92).animate(
+      CurvedAnimation(
+        parent: _fakeController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+
+    _fakeController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fakeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.progressStream != null) {
+      // Buffering → real progress
+      return StreamBuilder<double>(
+        stream: widget.progressStream,
+        initialData: 0.0,
+        builder: (_, snap) => _buildContent(snap.data ?? 0.0, isReal: true),
+      );
+    }
+
+    // Fetching URL → fake animated progress
+    return AnimatedBuilder(
+      animation: _fakeProgress,
+      builder: (_, __) => _buildContent(_fakeProgress.value, isReal: false),
+    );
+  }
+
+  Widget _buildContent(double value, {required bool isReal}) {
+    final pct = (value * 100).toInt();
+    final percentStr = ' $pct%';
+
+    return Container(
+      color: Colors.black87,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '${widget.message}$percentStr',
+            style: const TextStyle(color: Colors.white, fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: 240,
+            child: LinearProgressIndicator(
+              value: value,
+              valueColor: const AlwaysStoppedAnimation<Color>(_kPrimary),
+              backgroundColor: Colors.white24,
+              minHeight: 4,
+            ),
+          ),
+          if (!isReal) ...[
+            const SizedBox(height: 12),
+            Text(
+              pct < 35
+                  ? 'جاري استخراج الرابط...'
+                  : pct < 65
+                      ? 'جاري التحضير للتشغيل...'
+                      : 'تقريبًا جاهز...',
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Error Overlay ────────────────────────────────────────────────────────────
+class _ErrorOverlay extends StatelessWidget {
+  final IconData icon;
+  final String title, subtitle;
+  final VoidCallback onRetry;
+  const _ErrorOverlay({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-          gradient: LinearGradient(
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-              colors: [Colors.black87, Colors.transparent])),
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        SizedBox(
-            height: 24,
-            child: SliderTheme(
-              data: SliderTheme.of(context).copyWith(
-                trackHeight: 3,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 13),
-                activeTrackColor: _kPrimary,
-                inactiveTrackColor: Colors.white30,
-                thumbColor: _kPrimary,
-                overlayColor: Color(0x330D6EBE),
-              ),
-              child: Slider(
-                  value: progress,
-                  onChangeStart: onSliderChangeStart,
-                  onChanged: onSliderChanged,
-                  onChangeEnd: onSliderChangeEnd),
-            )),
-        Row(children: [
-          Text('${_fmt(currentSec)} / ${_fmt(totalSec)}',
+      color: Colors.black87,
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: Colors.white60, size: 56),
+          const SizedBox(height: 16),
+          Text(title,
               style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 12,
-                  fontFamily: 'monospace',
-                  fontWeight: FontWeight.w500)),
-          const Spacer(),
-          _ChipBtn(label: speed == 1.0 ? '1x' : '${speed}x', onTap: onSpeedTap),
-          const SizedBox(width: 8),
-          if (onQualityTap != null) ...[
-            _ChipBtn(label: qualityLabel, onTap: onQualityTap!),
-            const SizedBox(width: 14),
-          ],
-          GestureDetector(
-              onTap: onExit,
-              child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 3, vertical: 4),
-                  child: Icon(Icons.fullscreen_exit_rounded,
-                      color: Colors.white, size: 26))),
-        ]),
-      ]),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          Text(subtitle,
+              style: const TextStyle(color: Colors.white70, fontSize: 13),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('إعادة المحاولة'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _kPrimary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

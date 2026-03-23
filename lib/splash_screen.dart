@@ -359,7 +359,7 @@ class _SplashScreenState extends State<SplashScreen>
 
                 // ─── Bottom area: loader / offline ─────────────────────────
                 SizedBox(
-                  height: 80,
+                  height: 120,
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 400),
                     child: _state == _SplashState.offline

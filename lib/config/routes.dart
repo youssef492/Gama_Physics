@@ -22,6 +22,7 @@ import '../screens/teacher/student_list_screen.dart';
 import '../screens/teacher/attendance_sessions_screen.dart';
 import '../screens/teacher/take_attendance_screen.dart';
 import '../screens/teacher/manage_announcements_screen.dart';
+import '../screens/teacher/lesson_viewers_screen.dart';
 
 class AppRoutes {
   static Map<String, WidgetBuilder> get routes => {
@@ -36,7 +37,8 @@ class AppRoutes {
         '/student-lessons': (context) => const LessonsScreen(),
         '/student-lesson-detail': (context) => const LessonDetailScreen(),
         '/student-profile': (context) => const StudentProfileScreen(),
-        '/student-announcements': (context) => const StudentAnnouncementsScreen(),
+        '/student-announcements': (context) =>
+            const StudentAnnouncementsScreen(),
 
         // Teacher
         '/teacher-dashboard': (context) => const TeacherDashboardScreen(),
@@ -47,6 +49,8 @@ class AppRoutes {
         '/teacher-students': (context) => const StudentListScreen(),
         '/teacher-attendance': (context) => const AttendanceSessionsScreen(),
         '/take-attendance': (context) => const TakeAttendanceScreen(),
-        '/teacher-announcements': (context) => const ManageAnnouncementsScreen(),
+        '/teacher-announcements': (context) =>
+            const ManageAnnouncementsScreen(),
+        '/lesson-viewers': (context) => const LessonViewersScreen(), // ← جديد
       };
 }

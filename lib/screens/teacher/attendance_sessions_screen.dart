@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:GAMA/l10n/app_localizations.dart';
+import 'package:gama/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import '../../models/attendance_session.dart';
 import '../../services/firestore_service.dart';

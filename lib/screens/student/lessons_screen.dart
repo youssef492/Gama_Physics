@@ -115,21 +115,30 @@ class _LessonsScreenState extends State<LessonsScreen> {
                 builder: (_) => CodeEntryDialog(
                   lessonTitle: lesson.title,
                   onSubmit: (code) async {
-                    final valid = await data.validateAndUseCode(
-                      code: code,
-                      lessonId: lesson.id,
-                      studentId: auth.currentUser!.uid,
-                      studentName: auth.currentUser!.name,
-                    );
-                    if (valid && context.mounted) {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/student-lesson-detail',
-                          arguments: lesson);
-                    } else if (context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.invalidCode)),
+                    try {
+                      final valid = await data.validateAndUseCode(
+                        code: code,
+                        lessonId: lesson.id,
+                        studentId: auth.currentUser!.uid,
+                        studentName: auth.currentUser!.name,
                       );
+                      if (valid && context.mounted) {
+                        Navigator.pop(context);
+                        Navigator.pushNamed(context, '/student-lesson-detail',
+                            arguments: lesson);
+                      } else if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.invalidCode)),
+                        );
+                      }
+                    } catch (e) {
+                      if (e.toString().contains('used_by_another_student') && context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('خطأ هذا الكود لطالب اخر')),
+                        );
+                      }
                     }
                   },
                 ),

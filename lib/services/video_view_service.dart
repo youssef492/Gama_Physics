@@ -1,3 +1,4 @@
+import 'package:async/async.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/video_view.dart';
@@ -82,5 +83,72 @@ class VideoViewService {
       debugPrint('[VideoViewService] getUniqueViewersCount error: $e');
       return 0;
     }
+  }
+
+  static Future<int> getTotalViewsCount(String lessonId) async {
+    try {
+      final snap = await _db
+          .collection(_collection)
+          .where('lessonId', isEqualTo: lessonId)
+          .get();
+      int total = 0;
+      for (var doc in snap.docs) {
+        total += (doc.data()['watchCount'] as num?)?.toInt() ?? 0;
+      }
+      return total;
+    } catch (e) {
+      debugPrint('[VideoViewService] getTotalViewsCount error: $e');
+      return 0;
+    }
+  }
+
+  /// Stream لعدد المشاهدات لمجموعة دروس مرة واحدة (real-time)
+  static Stream<Map<String, int>> getViewCountsStream(List<String> lessonIds) {
+    if (lessonIds.isEmpty) return Stream.value({});
+
+    // Firestore whereIn محدود بـ 10 — خلي الكود يقسم لو عدى
+    final chunks = <List<String>>[];
+    for (var i = 0; i < lessonIds.length; i += 10) {
+      chunks.add(lessonIds.sublist(i, (i + 10).clamp(0, lessonIds.length)));
+    }
+
+    if (chunks.length == 1) {
+      return _db
+          .collection(_collection)
+          .where('lessonId', whereIn: chunks.first)
+          .snapshots()
+          .map((snap) {
+        final counts = <String, int>{for (final id in lessonIds) id: 0};
+        for (final doc in snap.docs) {
+          final lid = doc.data()['lessonId'] as String;
+          counts[lid] = (counts[lid] ?? 0) +
+              ((doc.data()['watchCount'] as num?)?.toInt() ?? 0);
+        }
+        return counts;
+      });
+    }
+
+    // أكتر من 10 دروس: ادمج streams
+    return StreamZip(
+      chunks.map((chunk) => _db
+              .collection(_collection)
+              .where('lessonId', whereIn: chunk)
+              .snapshots()
+              .map((snap) {
+            final counts = <String, int>{};
+            for (final doc in snap.docs) {
+              final lid = doc.data()['lessonId'] as String;
+              counts[lid] = (counts[lid] ?? 0) +
+                  ((doc.data()['watchCount'] as num?)?.toInt() ?? 0);
+            }
+            return counts;
+          })),
+    ).map((maps) {
+      final merged = <String, int>{for (final id in lessonIds) id: 0};
+      for (final m in maps) {
+        m.forEach((k, v) => merged[k] = (merged[k] ?? 0) + v);
+      }
+      return merged;
+    });
   }
 }

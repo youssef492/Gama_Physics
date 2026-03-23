@@ -216,8 +216,22 @@ class FirestoreService {
     final doc = query.docs.first;
     final code = AccessCode.fromSnapshot(doc);
 
-    if (!code.canBeUsed) return false;
+    // كود معطل صراحةً من المدرس
+    if (code.status == 'disabled') return false;
 
+    // ─── نفس الطالب استخدمه قبل كده → ادخله على طول بدون DB update ───
+    final alreadyMine = code.usedBy.any((u) => u.studentId == studentId);
+    if (alreadyMine) return true;
+
+    // ─── طالب تاني استخدمه → error ───
+    if (code.usedBy.isNotEmpty) {
+      throw Exception('used_by_another_student');
+    }
+
+    // ─── أول مرة يُستخدم: تحقق من الصلاحية ───
+    if (code.isExpired) return false;
+
+    // سجّل في Firestore واقفل الكود للطالب ده
     await doc.reference.update({
       'currentUses': FieldValue.increment(1),
       'usedBy': FieldValue.arrayUnion([
@@ -227,7 +241,7 @@ class FirestoreService {
           'usedAt': Timestamp.now(),
         }
       ]),
-      'status': (code.currentUses + 1 >= code.maxUses) ? 'used' : 'active',
+      'status': 'used', // مش active تاني، محجوز لطالب واحد
     });
 
     return true;
@@ -343,9 +357,8 @@ class FirestoreService {
         .collection('attendance')
         .orderBy('date', descending: true)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => AttendanceSession.fromSnapshot(d))
-            .toList());
+        .map((snap) =>
+            snap.docs.map((d) => AttendanceSession.fromSnapshot(d)).toList());
   }
 
   Future<AttendanceSession> createAttendanceSession(
@@ -361,10 +374,7 @@ class FirestoreService {
   }
 
   Future<void> updateAttendanceSession(AttendanceSession session) async {
-    await _db
-        .collection('attendance')
-        .doc(session.id)
-        .update(session.toMap());
+    await _db.collection('attendance').doc(session.id).update(session.toMap());
   }
 
   Future<void> deleteAttendanceSession(String id) async {
@@ -378,9 +388,8 @@ class FirestoreService {
         .collection('announcements')
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => Announcement.fromSnapshot(d))
-            .toList());
+        .map((snap) =>
+            snap.docs.map((d) => Announcement.fromSnapshot(d)).toList());
   }
 
   Future<void> addAnnouncement(Announcement announcement) async {

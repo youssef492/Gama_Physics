@@ -331,6 +331,9 @@ class DataProvider with ChangeNotifier {
         studentName: studentName,
       );
     } catch (e) {
+      if (e.toString().contains('used_by_another_student')) {
+        rethrow;
+      }
       _handleError(e);
       return false;
     }

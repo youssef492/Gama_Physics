@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:gama/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -19,8 +21,14 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
   String? semesterId;
   String? semesterName;
 
-  // cache عدد المشاهدين لكل درس عشان ما نعملش request كل rebuild
-  final Map<String, int> _viewerCounts = {};
+  StreamSubscription<Map<String, int>>? _countsSub;
+  Map<String, int> _viewerCounts = {};
+
+  @override
+  void dispose() {
+    _countsSub?.cancel();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -35,16 +43,14 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
     }
   }
 
-  // نجيب عدد المشاهدين لكل درس بعد ما الـ lessons تتحمل
-  Future<void> _loadViewerCounts(List<Lesson> lessons) async {
-    for (final lesson in lessons) {
-      if (!_viewerCounts.containsKey(lesson.id)) {
-        final count = await VideoViewService.getUniqueViewersCount(lesson.id);
-        if (mounted) {
-          setState(() => _viewerCounts[lesson.id] = count);
-        }
-      }
-    }
+  void _subscribeToViewCounts(List<Lesson> lessons) {
+    _countsSub?.cancel();
+    if (lessons.isEmpty) return;
+
+    final ids = lessons.map((l) => l.id).toList();
+    _countsSub = VideoViewService.getViewCountsStream(ids).listen((counts) {
+      if (mounted) setState(() => _viewerCounts = counts);
+    });
   }
 
   @override
@@ -52,9 +58,8 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
     final l10n = AppLocalizations.of(context)!;
     final data = context.watch<DataProvider>();
 
-    // نحمّل عدد المشاهدين لأي درس جديد
-    if (data.lessons.isNotEmpty) {
-      _loadViewerCounts(data.lessons);
+    if (data.lessons.isNotEmpty && _countsSub == null) {
+      _subscribeToViewCounts(data.lessons);
     }
 
     return Scaffold(

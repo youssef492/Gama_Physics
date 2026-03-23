@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gama_app/l10n/app_localizations.dart';
+import 'package:GAMA/l10n/app_localizations.dart';
 import '../../config/theme.dart';
 import '../../models/lesson.dart';
 import '../../widgets/video_player_widget.dart';
@@ -19,17 +19,39 @@ class LessonDetailScreen extends StatelessWidget {
       );
     }
 
+    return _LessonDetailView(lesson: lesson, l10n: l10n);
+  }
+}
+
+class _LessonDetailView extends StatefulWidget {
+  final Lesson lesson;
+  final AppLocalizations l10n;
+
+  const _LessonDetailView({
+    required this.lesson,
+    required this.l10n,
+  });
+
+  @override
+  State<_LessonDetailView> createState() => _LessonDetailViewState();
+}
+
+class _LessonDetailViewState extends State<_LessonDetailView> {
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(lesson.title)),
+      // AppBar دايماً موجود - مش بنشيله
+      appBar: AppBar(title: Text(widget.lesson.title)),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // VideoPlayerWidget بيتعمل مرة واحدة بس ومش بيتعمل recreate
             VideoPlayerWidget(
-              embedUrl: lesson.videoUrl,
-              videoType: lesson.videoType,
-              title: lesson.title,
-              rawVideoUrl: lesson.videoUrl,
+              embedUrl: widget.lesson.videoUrl,
+              videoType: widget.lesson.videoType,
+              title: widget.lesson.title,
+              rawVideoUrl: widget.lesson.videoUrl,
             ),
             Padding(
               padding: const EdgeInsets.all(20),
@@ -40,7 +62,7 @@ class LessonDetailScreen extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          lesson.title,
+                          widget.lesson.title,
                           style: Theme.of(context)
                               .textTheme
                               .titleLarge
@@ -51,15 +73,17 @@ class LessonDetailScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: lesson.isFree
+                          color: widget.lesson.isFree
                               ? AppTheme.freeGreen.withAlpha(25)
                               : AppTheme.paidOrange.withAlpha(25),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          lesson.isFree ? l10n.free : l10n.paid,
+                          widget.lesson.isFree
+                              ? widget.l10n.free
+                              : widget.l10n.paid,
                           style: TextStyle(
-                            color: lesson.isFree
+                            color: widget.lesson.isFree
                                 ? AppTheme.freeGreen
                                 : AppTheme.paidOrange,
                             fontWeight: FontWeight.w600,
@@ -69,7 +93,7 @@ class LessonDetailScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (lesson.description.isNotEmpty) ...[
+                  if (widget.lesson.description.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Container(
                       width: double.infinity,
@@ -89,7 +113,7 @@ class LessonDetailScreen extends StatelessWidget {
                                   size: 18, color: AppTheme.primaryBlue),
                               const SizedBox(width: 6),
                               Text(
-                                l10n.lessonDescription,
+                                widget.l10n.lessonDescription,
                                 style: const TextStyle(
                                     fontWeight: FontWeight.w600,
                                     color: AppTheme.primaryBlue),
@@ -98,7 +122,7 @@ class LessonDetailScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            lesson.description,
+                            widget.lesson.description,
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
@@ -109,26 +133,6 @@ class LessonDetailScreen extends StatelessWidget {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Icon(
-                        lesson.videoType == 'youtube'
-                            ? Icons.play_circle
-                            : Icons.cloud,
-                        size: 16,
-                        color: AppTheme.textMuted,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        lesson.videoType == 'youtube'
-                            ? 'YouTube'
-                            : 'Google Drive',
-                        style: const TextStyle(
-                            color: AppTheme.textMuted, fontSize: 12),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),

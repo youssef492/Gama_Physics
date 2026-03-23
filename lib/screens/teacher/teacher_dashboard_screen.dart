@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gama_app/l10n/app_localizations.dart';
+import 'package:GAMA/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
@@ -126,6 +126,20 @@ class _TeacherDashboardScreenState extends State<TeacherDashboardScreen> {
               Icons.people,
               const Color(0xFF06BEB6),
               () => Navigator.pushNamed(context, '/teacher-students'),
+            ),
+            _actionTile(
+              l10n.attendance,
+              l10n.takeAttendance,
+              Icons.fact_check,
+              const Color(0xFFF5A623),
+              () => Navigator.pushNamed(context, '/teacher-attendance'),
+            ),
+            _actionTile(
+              l10n.announcements,
+              l10n.newAnnouncement,
+              Icons.campaign,
+              const Color(0xFF9B51E0),
+              () => Navigator.pushNamed(context, '/teacher-announcements'),
             ),
             const SizedBox(height: 24),
             // Center(

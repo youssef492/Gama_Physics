@@ -1,10 +1,16 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import '../models/stage.dart';
 import '../models/semester.dart';
 import '../models/lesson.dart';
 import '../models/access_code.dart';
 import '../models/app_user.dart';
+import '../models/announcement.dart';
 import '../services/firestore_service.dart';
+
+enum DataError { none, offline, permissionDenied, unknown }
 
 class DataProvider with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
@@ -15,8 +21,17 @@ class DataProvider with ChangeNotifier {
   List<Lesson> _allPaidLessons = [];
   List<AccessCode> _codes = [];
   List<AppUser> _students = [];
+  List<Announcement> _announcements = [];
   bool _isLoading = false;
-  String? _error;
+  DataError _dataError = DataError.none;
+
+  StreamSubscription<List<Stage>>? _stagesSub;
+  StreamSubscription<List<Semester>>? _semestersSub;
+  StreamSubscription<List<Lesson>>? _lessonsSub;
+  StreamSubscription<List<Lesson>>? _paidLessonsSub;
+  StreamSubscription<List<AccessCode>>? _codesSub;
+  StreamSubscription<List<AppUser>>? _studentsSub;
+  StreamSubscription<List<Announcement>>? _announcementsSub;
 
   List<Stage> get stages => _stages;
   List<Semester> get semesters => _semesters;
@@ -24,30 +39,111 @@ class DataProvider with ChangeNotifier {
   List<Lesson> get allPaidLessons => _allPaidLessons;
   List<AccessCode> get codes => _codes;
   List<AppUser> get students => _students;
+  List<Announcement> get announcements => _announcements;
   bool get isLoading => _isLoading;
-  String? get error => _error;
+  DataError get dataError => _dataError;
+  bool get isOffline => _dataError == DataError.offline;
 
-  void clearError() {
-    _error = null;
-    notifyListeners();
-  }
-
-  Future<void> deleteStudent(String uid) async {
-    try {
-      await _firestoreService.deleteStudent(uid);
-    } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+  // backward compat
+  String? get error => _dataError == DataError.none ? null : _errorMessage;
+  String get _errorMessage {
+    switch (_dataError) {
+      case DataError.offline:
+        return 'لا يوجد اتصال بالإنترنت';
+      case DataError.permissionDenied:
+        return '';
+      case DataError.unknown:
+        return 'حدث خطأ، يرجى المحاولة مرة أخرى';
+      case DataError.none:
+        return '';
     }
   }
 
-  // ===== STAGES =====
+  void clearError() {
+    _dataError = DataError.none;
+    notifyListeners();
+  }
 
-  void listenToStages() {
-    _firestoreService.getStages().listen((stages) {
-      _stages = stages;
+  @override
+  void dispose() {
+    _stagesSub?.cancel();
+    _semestersSub?.cancel();
+    _lessonsSub?.cancel();
+    _paidLessonsSub?.cancel();
+    _codesSub?.cancel();
+    _studentsSub?.cancel();
+    _announcementsSub?.cancel();
+    super.dispose();
+  }
+
+  // ─── مركزي لمعالجة الأخطاء ────────────────────────────────────────────────
+  void _handleError(dynamic e, {bool silent = false}) {
+    if (e is FirebaseException) {
+      if (e.code == 'permission-denied' || e.code == 'PERMISSION_DENIED') {
+        // نتجاهله تماماً — بيحصل أول تشغيل قبل ما الـ auth يكتمل
+        if (!silent) debugPrint('[DataProvider] permission-denied silenced');
+        return; // مش بنغير الـ state خالص
+      }
+      if (e.code == 'unavailable' || e.code == 'deadline-exceeded') {
+        _dataError = DataError.offline;
+        notifyListeners();
+        return;
+      }
+    }
+    if (e is SocketException || e is TimeoutException) {
+      _dataError = DataError.offline;
       notifyListeners();
-    });
+      return;
+    }
+    if (!silent) debugPrint('[DataProvider] unhandled: $e');
+  }
+
+  // ─── ANNOUNCEMENTS ─────────────────────────────────────────────────────────
+  void listenToAnnouncements() {
+    _announcementsSub?.cancel();
+    _announcementsSub = _firestoreService.getAnnouncements().listen(
+      (list) {
+        _announcements = list;
+        notifyListeners();
+      },
+      onError: (e) => _handleError(e, silent: true),
+      cancelOnError: false,
+    );
+  }
+
+  Future<void> addAnnouncement(Announcement a) async {
+    try {
+      await _firestoreService.addAnnouncement(a);
+    } catch (e) {
+      _handleError(e);
+    }
+  }
+
+  Future<void> deleteAnnouncement(String id) async {
+    try {
+      await _firestoreService.deleteAnnouncement(id);
+    } catch (e) {
+      _handleError(e);
+    }
+  }
+
+  // ─── STAGES ────────────────────────────────────────────────────────────────
+  void listenToStages() {
+    _stagesSub?.cancel();
+    _isLoading = true;
+    _stagesSub = _firestoreService.getStages().listen(
+      (stages) {
+        _stages = stages;
+        _isLoading = false;
+        if (_dataError != DataError.none) _dataError = DataError.none;
+        notifyListeners();
+      },
+      onError: (e) {
+        _isLoading = false;
+        _handleError(e, silent: true);
+      },
+      cancelOnError: false,
+    );
   }
 
   Future<void> addStage(String name, int order) async {
@@ -55,10 +151,9 @@ class DataProvider with ChangeNotifier {
     notifyListeners();
     try {
       await _firestoreService.addStage(name, order);
-      _isLoading = false;
-      notifyListeners();
     } catch (e) {
-      _error = e.toString();
+      _handleError(e);
+    } finally {
       _isLoading = false;
       notifyListeners();
     }
@@ -68,8 +163,7 @@ class DataProvider with ChangeNotifier {
     try {
       await _firestoreService.updateStage(id, name, order);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
     }
   }
 
@@ -77,26 +171,29 @@ class DataProvider with ChangeNotifier {
     try {
       await _firestoreService.deleteStage(id);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
     }
   }
 
-  // ===== SEMESTERS =====
-
+  // ─── SEMESTERS ─────────────────────────────────────────────────────────────
   void listenToSemesters(String stageId) {
-    _firestoreService.getSemesters(stageId).listen((semesters) {
-      _semesters = semesters;
-      notifyListeners();
-    });
+    _semestersSub?.cancel();
+    _semestersSub = _firestoreService.getSemesters(stageId).listen(
+      (list) {
+        _semesters = list;
+        if (_dataError != DataError.none) _dataError = DataError.none;
+        notifyListeners();
+      },
+      onError: (e) => _handleError(e, silent: true),
+      cancelOnError: false,
+    );
   }
 
   Future<void> addSemester(String stageId, String name, int order) async {
     try {
       await _firestoreService.addSemester(stageId, name, order);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
     }
   }
 
@@ -104,8 +201,7 @@ class DataProvider with ChangeNotifier {
     try {
       await _firestoreService.updateSemester(id, name, order);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
     }
   }
 
@@ -113,41 +209,54 @@ class DataProvider with ChangeNotifier {
     try {
       await _firestoreService.deleteSemester(id);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
     }
   }
 
-  // ===== LESSONS =====
-
+  // ─── LESSONS ───────────────────────────────────────────────────────────────
   void listenToLessons(String semesterId) {
-    _firestoreService.getLessons(semesterId).listen((lessons) {
-      _lessons = lessons;
-      notifyListeners();
-    });
+    _lessonsSub?.cancel();
+    _lessonsSub = _firestoreService.getLessons(semesterId).listen(
+      (list) {
+        _lessons = list;
+        if (_dataError != DataError.none) _dataError = DataError.none;
+        notifyListeners();
+      },
+      onError: (e) => _handleError(e, silent: true),
+      cancelOnError: false,
+    );
   }
 
   void listenToVisibleLessons(String semesterId) {
-    _firestoreService.getVisibleLessons(semesterId).listen((lessons) {
-      _lessons = lessons;
-      notifyListeners();
-    });
+    _lessonsSub?.cancel();
+    _lessonsSub = _firestoreService.getVisibleLessons(semesterId).listen(
+      (list) {
+        _lessons = list;
+        if (_dataError != DataError.none) _dataError = DataError.none;
+        notifyListeners();
+      },
+      onError: (e) => _handleError(e, silent: true),
+      cancelOnError: false,
+    );
   }
 
-  /// للاستخدام في generate codes - بيجيب كل الدروس المدفوعة بغض النظر عن الـ semester
   void listenToAllPaidLessons() {
-    _firestoreService.getAllPaidLessons().listen((lessons) {
-      _allPaidLessons = lessons;
-      notifyListeners();
-    });
+    _paidLessonsSub?.cancel();
+    _paidLessonsSub = _firestoreService.getAllPaidLessons().listen(
+      (list) {
+        _allPaidLessons = list;
+        notifyListeners();
+      },
+      onError: (e) => _handleError(e, silent: true),
+      cancelOnError: false,
+    );
   }
 
   Future<void> addLesson(Lesson lesson) async {
     try {
       await _firestoreService.addLesson(lesson);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
     }
   }
 
@@ -155,8 +264,7 @@ class DataProvider with ChangeNotifier {
     try {
       await _firestoreService.updateLesson(id, data);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
     }
   }
 
@@ -164,8 +272,7 @@ class DataProvider with ChangeNotifier {
     try {
       await _firestoreService.toggleLessonVisibility(id, isVisible);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
     }
   }
 
@@ -173,33 +280,40 @@ class DataProvider with ChangeNotifier {
     try {
       await _firestoreService.deleteLesson(id);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
     }
   }
 
-  // ===== ACCESS CODES =====
-
+  // ─── ACCESS CODES ──────────────────────────────────────────────────────────
   void listenToCodesForLesson(String lessonId) {
-    _firestoreService.getCodesForLesson(lessonId).listen((codes) {
-      _codes = codes;
-      notifyListeners();
-    });
+    _codesSub?.cancel();
+    _codesSub = _firestoreService.getCodesForLesson(lessonId).listen(
+      (list) {
+        _codes = list;
+        notifyListeners();
+      },
+      onError: (e) => _handleError(e, silent: true),
+      cancelOnError: false,
+    );
   }
 
   void listenToAllCodes() {
-    _firestoreService.getAllCodes().listen((codes) {
-      _codes = codes;
-      notifyListeners();
-    });
+    _codesSub?.cancel();
+    _codesSub = _firestoreService.getAllCodes().listen(
+      (list) {
+        _codes = list;
+        notifyListeners();
+      },
+      onError: (e) => _handleError(e, silent: true),
+      cancelOnError: false,
+    );
   }
 
   Future<void> addCode(AccessCode code) async {
     try {
       await _firestoreService.addCode(code);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
     }
   }
 
@@ -217,8 +331,7 @@ class DataProvider with ChangeNotifier {
         studentName: studentName,
       );
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
       return false;
     }
   }
@@ -227,8 +340,7 @@ class DataProvider with ChangeNotifier {
     try {
       await _firestoreService.disableCode(id);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
     }
   }
 
@@ -236,49 +348,47 @@ class DataProvider with ChangeNotifier {
     try {
       await _firestoreService.enableCode(id);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
     }
   }
 
-  /// تعديل تاريخ انتهاء كود واحد
   Future<void> updateCodeExpiry(String id, DateTime? newExpiry) async {
     try {
       await _firestoreService.updateCodeExpiry(id, newExpiry);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
     }
   }
 
-  /// تعديل تاريخ انتهاء كل أكواد درس — يرجع عدد الأكواد اللي اتعدلت
   Future<int> bulkUpdateExpiryByLesson(
       String lessonId, DateTime? newExpiry) async {
     try {
       return await _firestoreService.bulkUpdateExpiryByLesson(
           lessonId, newExpiry);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
       return 0;
     }
   }
 
-  // ===== STUDENTS =====
-
+  // ─── STUDENTS ──────────────────────────────────────────────────────────────
   void listenToStudents() {
-    _firestoreService.getStudents().listen((students) {
-      _students = students;
-      notifyListeners();
-    });
+    _studentsSub?.cancel();
+    _studentsSub = _firestoreService.getStudents().listen(
+      (list) {
+        _students = list;
+        notifyListeners();
+      },
+      onError: (e) => _handleError(e, silent: true),
+      cancelOnError: false,
+    );
   }
 
   Future<void> toggleStudentDisabled(String uid, bool isDisabled) async {
     try {
       await _firestoreService.toggleStudentDisabled(uid, isDisabled);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
     }
   }
 
@@ -286,8 +396,7 @@ class DataProvider with ChangeNotifier {
     try {
       await _firestoreService.updateStudentGrade(uid, newGrade);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e);
     }
   }
 
@@ -295,9 +404,16 @@ class DataProvider with ChangeNotifier {
     try {
       return await _firestoreService.getCodesUsedByStudent(studentId);
     } catch (e) {
-      _error = e.toString();
-      notifyListeners();
+      _handleError(e, silent: true);
       return [];
+    }
+  }
+
+  Future<void> deleteStudent(String uid) async {
+    try {
+      await _firestoreService.deleteStudent(uid);
+    } catch (e) {
+      _handleError(e);
     }
   }
 }

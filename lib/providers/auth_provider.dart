@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/app_user.dart';
 import '../services/auth_service.dart';
@@ -30,11 +31,30 @@ class AuthProvider with ChangeNotifier {
     if (firebaseUser != null) {
       _currentUser = await _authService.getUserData(firebaseUser.uid);
     }
-    _initialized = true; // ← أضف دي
+    _initialized = true;
     notifyListeners();
   }
 
-  // ===== STUDENT AUTH (Phone + Password, no OTP) =====
+  // ─── Generate & save student code if missing ─────────────────────────────
+  Future<void> generateAndSaveStudentCode() async {
+    if (_currentUser == null) return;
+    if (_currentUser!.studentCode.isNotEmpty) return;
+
+    final code = _generateCode();
+    await _authService.saveStudentCode(_currentUser!.uid, code);
+    _currentUser = _currentUser!.copyWith(studentCode: code);
+    notifyListeners();
+  }
+
+  String _generateCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    final random = Random();
+    final code =
+        List.generate(6, (_) => chars[random.nextInt(chars.length)]).join();
+    return 'GM-$code';
+  }
+
+  // ===== STUDENT AUTH =====
 
   Future<bool> signInStudent({
     required String phone,
@@ -232,7 +252,6 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
     try {
       await _authService.updateUserGrade(_currentUser!.uid, newGrade);
-      // حدّث الـ local state فوراً بدون ما تعمل re-fetch
       _currentUser = _currentUser!.copyWith(grade: newGrade);
       _isLoading = false;
       notifyListeners();

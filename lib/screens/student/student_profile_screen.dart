@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:gama_app/l10n/app_localizations.dart';
+import 'package:flutter/services.dart';
+import 'package:GAMA/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/data_provider.dart';
@@ -18,13 +20,15 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _isChangingPassword = false;
   bool _isChangingGrade = false;
+  bool _isGeneratingCode = false;
   String? _selectedGrade;
 
   @override
   void initState() {
     super.initState();
-    // حمّل الـ stages علشان الـ dropdown
     context.read<DataProvider>().listenToStages();
+    // لو الطالب مش عنده كود، ولّده تلقائياً
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureStudentCode());
   }
 
   @override
@@ -32,6 +36,18 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  // ─── Ensure student has a code ───────────────────────────────────────────
+  Future<void> _ensureStudentCode() async {
+    final auth = context.read<AuthProvider>();
+    if (auth.currentUser == null) return;
+    if (auth.currentUser!.studentCode.isNotEmpty) return;
+
+    // مش عنده كود → ولّد واحد
+    setState(() => _isGeneratingCode = true);
+    await auth.generateAndSaveStudentCode();
+    if (mounted) setState(() => _isGeneratingCode = false);
   }
 
   // ─── Change Password ──────────────────────────────────────────────────────
@@ -84,6 +100,131 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     ));
   }
 
+  // ─── Show QR full screen dialog ───────────────────────────────────────────
+  void _showQrDialog(BuildContext context, String uid, String code) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Row(
+                children: [
+                  const Icon(Icons.qr_code_2,
+                      color: AppTheme.primaryBlue, size: 28),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Text(
+                      'QR Code',
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // QR Code large
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(15),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: QrImageView(
+                  data: uid,
+                  version: QrVersions.auto,
+                  size: 220,
+                  backgroundColor: Colors.white,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: Colors.black,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Student Code
+              Container(
+                width: double.infinity,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppTheme.deepNavy,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      code,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'monospace',
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'كود الطالب',
+                      style: TextStyle(
+                        color: Colors.white.withAlpha(180),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Copy button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: code));
+                    Navigator.pop(ctx);
+                    _showSnackBar('تم نسخ الكود ✓', success: true);
+                  },
+                  icon: const Icon(Icons.copy, size: 18),
+                  label: const Text('نسخ الكود'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primaryBlue,
+                    side: const BorderSide(color: AppTheme.primaryBlue),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ─── Build ────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -92,10 +233,12 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     final user = auth.currentUser;
     final grades = data.stages.map((s) => s.name).toList();
 
-    // init selected grade من current user
     if (_selectedGrade == null && user?.grade != null) {
       _selectedGrade = user!.grade;
     }
+
+    final studentCode = user?.studentCode ?? '';
+    final hasCode = studentCode.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -106,7 +249,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // ─── Avatar ───────────────────────────────────────
+            // ── Avatar ────────────────────────────────────────────────────
             Container(
               width: 80,
               height: 80,
@@ -137,12 +280,206 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 style: const TextStyle(color: AppTheme.textMuted)),
             const SizedBox(height: 24),
 
-            // ─── Info tiles ───────────────────────────────────
+            // ── Info tiles ────────────────────────────────────────────────
             _infoTile(Icons.phone, l10n.phoneNumber, user?.phone ?? ''),
             _infoTile(Icons.school, l10n.stage, user?.grade ?? ''),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
-            // ─── Change Grade card ────────────────────────────
+            // ── QR Code Card ──────────────────────────────────────────────
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.qr_code_2,
+                            color: AppTheme.primaryBlue),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'QR Code',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600, fontSize: 16),
+                          ),
+                        ),
+                        if (_isGeneratingCode)
+                          const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (_isGeneratingCode)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Text(
+                            'جاري إنشاء الكود...',
+                            style: TextStyle(color: AppTheme.textMuted),
+                          ),
+                        ),
+                      )
+                    else if (hasCode) ...[
+                      // QR preview + info
+                      Row(
+                        children: [
+                          // QR preview
+                          GestureDetector(
+                            onTap: () =>
+                                _showQrDialog(context, user.uid, studentCode),
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.grey.shade200),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withAlpha(10),
+                                    blurRadius: 6,
+                                  ),
+                                ],
+                              ),
+                              child: QrImageView(
+                                data: user!.uid,
+                                version: QrVersions.auto,
+                                size: 90,
+                                backgroundColor: Colors.white,
+                                eyeStyle: const QrEyeStyle(
+                                  eyeShape: QrEyeShape.square,
+                                  color: Colors.black,
+                                ),
+                                dataModuleStyle: const QrDataModuleStyle(
+                                  dataModuleShape: QrDataModuleShape.square,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+
+                          // Code info
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'كود الطالب',
+                                  style: TextStyle(
+                                      fontSize: 12, color: AppTheme.textMuted),
+                                ),
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.deepNavy,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    studentCode,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontFamily: 'monospace',
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 3,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton.icon(
+                                        onPressed: () => _showQrDialog(
+                                            context, user.uid, studentCode),
+                                        icon: const Icon(Icons.fullscreen,
+                                            size: 16),
+                                        label: const Text('عرض',
+                                            style: TextStyle(fontSize: 12)),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: AppTheme.primaryBlue,
+                                          side: const BorderSide(
+                                              color: AppTheme.primaryBlue),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 8),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: OutlinedButton.icon(
+                                        onPressed: () {
+                                          Clipboard.setData(
+                                              ClipboardData(text: studentCode));
+                                          _showSnackBar('تم نسخ الكود ✓',
+                                              success: true);
+                                        },
+                                        icon: const Icon(Icons.copy, size: 16),
+                                        label: const Text('نسخ',
+                                            style: TextStyle(fontSize: 12)),
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: AppTheme.accentCyan,
+                                          side: const BorderSide(
+                                              color: AppTheme.accentCyan),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 8),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      // No code yet
+                      Center(
+                        child: Column(
+                          children: [
+                            Icon(Icons.qr_code,
+                                size: 48,
+                                color: AppTheme.textMuted.withAlpha(100)),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'لا يوجد كود بعد',
+                              style: TextStyle(color: AppTheme.textMuted),
+                            ),
+                            const SizedBox(height: 12),
+                            ElevatedButton.icon(
+                              onPressed: _isGeneratingCode
+                                  ? null
+                                  : () async {
+                                      setState(() => _isGeneratingCode = true);
+                                      await auth.generateAndSaveStudentCode();
+                                      if (mounted) {
+                                        setState(
+                                            () => _isGeneratingCode = false);
+                                      }
+                                    },
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('إنشاء كود'),
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryBlue),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // ── Change Grade card ─────────────────────────────────────────
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -221,7 +558,6 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                               )
                             : Text(l10n.save),
                       ),
-                      // hint لو نفس المرحلة الحالية
                       if (_selectedGrade == user?.grade) ...[
                         const SizedBox(height: 6),
                         Text(
@@ -238,7 +574,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             ),
             const SizedBox(height: 12),
 
-            // ─── Change Password card ─────────────────────────
+            // ── Change Password card ──────────────────────────────────────
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),

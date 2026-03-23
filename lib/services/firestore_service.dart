@@ -4,6 +4,8 @@ import '../models/semester.dart';
 import '../models/lesson.dart';
 import '../models/access_code.dart';
 import '../models/app_user.dart';
+import '../models/attendance_session.dart';
+import '../models/announcement.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -332,5 +334,63 @@ class FirestoreService {
 
   Future<void> deleteStudent(String uid) async {
     await _db.collection('users').doc(uid).delete();
+  }
+
+  // ===== ATTENDANCE =====
+
+  Stream<List<AttendanceSession>> getAttendanceSessions() {
+    return _db
+        .collection('attendance')
+        .orderBy('date', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => AttendanceSession.fromSnapshot(d))
+            .toList());
+  }
+
+  Future<AttendanceSession> createAttendanceSession(
+      DateTime date, String title) async {
+    final doc = await _db.collection('attendance').add({
+      'date': Timestamp.fromDate(date),
+      'title': title,
+      'defaultPrice': 0.0,
+      'presentStudents': [],
+      'isEnded': false,
+    });
+    return AttendanceSession(id: doc.id, date: date, title: title);
+  }
+
+  Future<void> updateAttendanceSession(AttendanceSession session) async {
+    await _db
+        .collection('attendance')
+        .doc(session.id)
+        .update(session.toMap());
+  }
+
+  Future<void> deleteAttendanceSession(String id) async {
+    await _db.collection('attendance').doc(id).delete();
+  }
+
+  // ===== ANNOUNCEMENTS =====
+
+  Stream<List<Announcement>> getAnnouncements() {
+    return _db
+        .collection('announcements')
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs
+            .map((d) => Announcement.fromSnapshot(d))
+            .toList());
+  }
+
+  Future<void> addAnnouncement(Announcement announcement) async {
+    await _db
+        .collection('announcements')
+        .doc(announcement.id)
+        .set(announcement.toMap());
+  }
+
+  Future<void> deleteAnnouncement(String id) async {
+    await _db.collection('announcements').doc(id).delete();
   }
 }

@@ -7,7 +7,8 @@ class AppUser {
   final String email;
   final String role;
   final String grade;
-  final String password; // ← بدل passwordHash
+  final String password;
+  final String studentCode; // ← NEW
   final DateTime createdAt;
   final bool isDisabled;
 
@@ -19,6 +20,7 @@ class AppUser {
     required this.role,
     this.grade = '',
     this.password = '',
+    this.studentCode = '', // ← NEW
     DateTime? createdAt,
     this.isDisabled = false,
   }) : createdAt = createdAt ?? DateTime.now();
@@ -35,6 +37,7 @@ class AppUser {
       'role': role,
       'grade': grade,
       'password': password,
+      'studentCode': studentCode, // ← NEW
       'createdAt': Timestamp.fromDate(createdAt),
       'isDisabled': isDisabled,
     };
@@ -49,6 +52,7 @@ class AppUser {
       role: map['role'] ?? 'student',
       grade: map['grade'] ?? '',
       password: map['password'] ?? '',
+      studentCode: map['studentCode'] ?? '', // ← NEW
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       isDisabled: map['isDisabled'] ?? false,
     );
@@ -59,6 +63,7 @@ class AppUser {
     String? phone,
     String? grade,
     String? password,
+    String? studentCode, // ← NEW
     bool? isDisabled,
   }) {
     return AppUser(
@@ -69,6 +74,7 @@ class AppUser {
       role: role,
       grade: grade ?? this.grade,
       password: password ?? this.password,
+      studentCode: studentCode ?? this.studentCode, // ← NEW
       createdAt: createdAt,
       isDisabled: isDisabled ?? this.isDisabled,
     );

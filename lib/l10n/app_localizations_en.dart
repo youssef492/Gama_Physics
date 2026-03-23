@@ -177,6 +177,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteAccount => 'Delete Account Permanently';
 
   @override
+  String get deleteAnnouncementConfirm =>
+      'Are you sure you want to delete this announcement?';
+
+  @override
+  String get announcements => 'Announcements';
+
+  @override
+  String get newAnnouncement => 'New Announcement';
+
+  @override
+  String get announcementTitle => 'Announcement Title';
+
+  @override
+  String get announcementContent => 'Announcement Content';
+
+  @override
+  String get noAnnouncements => 'No announcements currently';
+
+  @override
+  String get announcementAdded => 'Announcement added successfully';
+
+  @override
+  String get announcementDeleted => 'Announcement deleted successfully';
+
+  @override
   String get deleteStudentConfirm => 'Are you sure you want to delete';
 
   @override
@@ -473,4 +498,89 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gradeAlreadyCurrent => 'This is already your current stage';
+
+  @override
+  String get playbackSpeed => 'Playback Speed';
+
+  @override
+  String get videoQuality => 'Video Quality';
+
+  @override
+  String get skipForward10 => '+10 sec';
+
+  @override
+  String get skipBackward10 => '-10 sec';
+
+  @override
+  String get attendance => 'Attendance';
+
+  @override
+  String get takeAttendance => 'Take Attendance';
+
+  @override
+  String get newSession => 'New Session';
+
+  @override
+  String get scanQrCode => 'Scan QR/Barcode';
+
+  @override
+  String get searchStudent => 'Search by name or phone...';
+
+  @override
+  String get markPresent => 'Mark Present';
+
+  @override
+  String get presentStudents => 'Present Students';
+
+  @override
+  String get removeFromSession => 'Remove from session';
+
+  @override
+  String get sessionDate => 'Session Date';
+
+  @override
+  String get sessionTitle => 'Session Title (Optional)';
+
+  @override
+  String get endSession => 'End Session';
+
+  @override
+  String get sessionPrice => 'Student Session Price';
+
+  @override
+  String get studentPayment => 'Student Payment';
+
+  @override
+  String get generatePdf => 'Generate PDF';
+
+  @override
+  String get paidAmount => 'Paid Amount';
+
+  @override
+  String get notPaid => 'Pending/Not paid';
+
+  @override
+  String get savePdf => 'Save & Share PDF';
+
+  @override
+  String get confirmEndSession => 'Confirm ending session?';
+
+  @override
+  String get sessionEndedSuccess => 'Session ended successfully!';
+
+  @override
+  String get videoNotAvailable => 'Video not available';
+
+  @override
+  String get videoNotAvailableDesc =>
+      'The video is currently unavailable. Please try again later.';
+
+  @override
+  String get video_loading => 'Loading video...';
+
+  @override
+  String get video_error => 'Error loading video';
+
+  @override
+  String get video_retry => 'Retry';
 }

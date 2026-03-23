@@ -6,9 +6,11 @@ list(APPEND FLUTTER_PLUGIN_LIST
   cloud_firestore
   firebase_auth
   firebase_core
-  flutter_inappwebview_windows
+  media_kit_video
+  printing
   share_plus
   url_launcher_windows
+  volume_controller
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST

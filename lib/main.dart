@@ -1,7 +1,11 @@
+import 'package:GAMA/l10n/app_localizations.dart';
+import 'package:GAMA/splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:gama_app/l10n/app_localizations.dart';
+
+import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'config/theme.dart';
@@ -9,15 +13,20 @@ import 'config/routes.dart';
 import 'providers/auth_provider.dart';
 import 'providers/data_provider.dart';
 import 'providers/language_provider.dart';
-import 'screens/auth/role_selection_screen.dart';
-import 'screens/student/student_home_screen.dart';
-import 'screens/teacher/teacher_dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+  );
+
   runApp(const GamaApp());
 }
 
@@ -32,8 +41,8 @@ class GamaApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DataProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
       ],
-      child: Consumer2<AuthProvider, LanguageProvider>(
-        builder: (context, auth, lang, _) {
+      child: Consumer<LanguageProvider>(
+        builder: (context, lang, _) {
           return MaterialApp(
             title: 'Gama Physics',
             debugShowCheckedModeBanner: false,
@@ -50,48 +59,11 @@ class GamaApp extends StatelessWidget {
               GlobalCupertinoLocalizations.delegate,
             ],
             routes: AppRoutes.routes,
-            home: const AuthGate(),
+            // ─── SplashScreen هي الـ entry point دلوقتي ────────────────────
+            home: const SplashScreen(),
           );
         },
       ),
     );
-  }
-}
-
-class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-
-    if (!auth.initialized) {
-      return Scaffold(
-        backgroundColor: AppTheme.deepNavy,
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              CircularProgressIndicator(color: AppTheme.accentCyan),
-              SizedBox(height: 16),
-              Text(
-                'GAMA PHYSICS',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 6,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (!auth.isAuthenticated) return const RoleSelectionScreen();
-    if (auth.isTeacher) return const TeacherDashboardScreen();
-    if (auth.isStudent) return const StudentHomeScreen();
-    return const RoleSelectionScreen();
   }
 }

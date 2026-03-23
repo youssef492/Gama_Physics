@@ -1,5 +1,5 @@
+import 'package:GAMA/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:gama_app/l10n/app_localizations.dart';
 import '../config/theme.dart';
 
 class CodeEntryDialog extends StatefulWidget {

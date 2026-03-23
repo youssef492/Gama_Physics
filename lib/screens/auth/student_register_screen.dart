@@ -1,5 +1,5 @@
+import 'package:GAMA/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
-import 'package:gama_app/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
@@ -87,16 +87,6 @@ class _StudentRegisterScreenState extends State<StudentRegisterScreen> {
 
     // حوّل الـ stages لـ list of strings، fallback لو لسه بتتحمل
     final grades = data.stages.map((s) => s.name).toList();
-    if (grades.isNotEmpty &&
-        (_selectedGrade == null || !grades.contains(_selectedGrade))) {
-      // اعمل ده outside build مش هنا - بس هنا safe لأنه بيحصل مرة واحدة
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted &&
-            (_selectedGrade == null || !grades.contains(_selectedGrade))) {
-          setState(() => _selectedGrade = grades.first);
-        }
-      });
-    }
 
     return LoadingOverlay(
       isLoading: auth.isLoading,
@@ -168,7 +158,9 @@ class _StudentRegisterScreenState extends State<StudentRegisterScreen> {
                     )
                   else
                     DropdownButtonFormField<String>(
-                      initialValue: _selectedGrade,
+                      initialValue: grades.contains(_selectedGrade)
+                          ? _selectedGrade
+                          : grades.first, // ← تعديل
                       decoration: InputDecoration(
                         labelText: l10n.stage,
                         prefixIcon: const Icon(Icons.grade),
@@ -204,6 +196,14 @@ class _StudentRegisterScreenState extends State<StudentRegisterScreen> {
                     decoration: InputDecoration(
                       labelText: l10n.confirmPassword,
                       prefixIcon: const Icon(Icons.lock_outline),
+                      // ← إضافة
+                      suffixIcon: IconButton(
+                        icon: Icon(_showPassword
+                            ? Icons.visibility_off
+                            : Icons.visibility),
+                        onPressed: () =>
+                            setState(() => _showPassword = !_showPassword),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),

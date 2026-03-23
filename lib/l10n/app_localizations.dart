@@ -434,6 +434,54 @@ abstract class AppLocalizations {
   /// **'حذف الحساب نهائياً'**
   String get deleteAccount;
 
+  /// No description provided for @deleteAnnouncementConfirm.
+  ///
+  /// In ar, this message translates to:
+  /// **'هل أنت متأكد من حذف هذا الإعلان؟'**
+  String get deleteAnnouncementConfirm;
+
+  /// No description provided for @announcements.
+  ///
+  /// In ar, this message translates to:
+  /// **'الإعلانات'**
+  String get announcements;
+
+  /// No description provided for @newAnnouncement.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعلان جديد'**
+  String get newAnnouncement;
+
+  /// No description provided for @announcementTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'عنوان الإعلان'**
+  String get announcementTitle;
+
+  /// No description provided for @announcementContent.
+  ///
+  /// In ar, this message translates to:
+  /// **'نص الإعلان'**
+  String get announcementContent;
+
+  /// No description provided for @noAnnouncements.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد إعلانات حالياً'**
+  String get noAnnouncements;
+
+  /// No description provided for @announcementAdded.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إضافة الإعلان بنجاح'**
+  String get announcementAdded;
+
+  /// No description provided for @announcementDeleted.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم حذف الإعلان بنجاح'**
+  String get announcementDeleted;
+
   /// No description provided for @deleteStudentConfirm.
   ///
   /// In ar, this message translates to:
@@ -1003,6 +1051,174 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'هذه هي مرحلتك الحالية'**
   String get gradeAlreadyCurrent;
+
+  /// No description provided for @playbackSpeed.
+  ///
+  /// In ar, this message translates to:
+  /// **'سرعة التشغيل'**
+  String get playbackSpeed;
+
+  /// No description provided for @videoQuality.
+  ///
+  /// In ar, this message translates to:
+  /// **'جودة الفيديو'**
+  String get videoQuality;
+
+  /// No description provided for @skipForward10.
+  ///
+  /// In ar, this message translates to:
+  /// **'+10 ثانية'**
+  String get skipForward10;
+
+  /// No description provided for @skipBackward10.
+  ///
+  /// In ar, this message translates to:
+  /// **'-10 ثانية'**
+  String get skipBackward10;
+
+  /// No description provided for @attendance.
+  ///
+  /// In ar, this message translates to:
+  /// **'الغياب'**
+  String get attendance;
+
+  /// No description provided for @takeAttendance.
+  ///
+  /// In ar, this message translates to:
+  /// **'أخذ الغياب'**
+  String get takeAttendance;
+
+  /// No description provided for @newSession.
+  ///
+  /// In ar, this message translates to:
+  /// **'حصة جديدة'**
+  String get newSession;
+
+  /// No description provided for @scanQrCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'مسح كود QR او Barcode'**
+  String get scanQrCode;
+
+  /// No description provided for @searchStudent.
+  ///
+  /// In ar, this message translates to:
+  /// **'البحث عن طالب بالاسم أو الرقم...'**
+  String get searchStudent;
+
+  /// No description provided for @markPresent.
+  ///
+  /// In ar, this message translates to:
+  /// **'تسجيل حضور'**
+  String get markPresent;
+
+  /// No description provided for @presentStudents.
+  ///
+  /// In ar, this message translates to:
+  /// **'الطلاب الحاضرون'**
+  String get presentStudents;
+
+  /// No description provided for @removeFromSession.
+  ///
+  /// In ar, this message translates to:
+  /// **'إزالة من الحصة'**
+  String get removeFromSession;
+
+  /// No description provided for @sessionDate.
+  ///
+  /// In ar, this message translates to:
+  /// **'تاريخ الحصة'**
+  String get sessionDate;
+
+  /// No description provided for @sessionTitle.
+  ///
+  /// In ar, this message translates to:
+  /// **'اسم الحصة (اختياري)'**
+  String get sessionTitle;
+
+  /// No description provided for @endSession.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنهاء الحصة'**
+  String get endSession;
+
+  /// No description provided for @sessionPrice.
+  ///
+  /// In ar, this message translates to:
+  /// **'سعر الحصة للطالب'**
+  String get sessionPrice;
+
+  /// No description provided for @studentPayment.
+  ///
+  /// In ar, this message translates to:
+  /// **'دفع الطالب'**
+  String get studentPayment;
+
+  /// No description provided for @generatePdf.
+  ///
+  /// In ar, this message translates to:
+  /// **'إنشاء PDF'**
+  String get generatePdf;
+
+  /// No description provided for @paidAmount.
+  ///
+  /// In ar, this message translates to:
+  /// **'المبلغ المدفوع'**
+  String get paidAmount;
+
+  /// No description provided for @notPaid.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يدفع'**
+  String get notPaid;
+
+  /// No description provided for @savePdf.
+  ///
+  /// In ar, this message translates to:
+  /// **'حفظ ومشاركة PDF'**
+  String get savePdf;
+
+  /// No description provided for @confirmEndSession.
+  ///
+  /// In ar, this message translates to:
+  /// **'تأكيد إنهاء الحصة؟'**
+  String get confirmEndSession;
+
+  /// No description provided for @sessionEndedSuccess.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم إنهاء الحصة بنجاح!'**
+  String get sessionEndedSuccess;
+
+  /// No description provided for @videoNotAvailable.
+  ///
+  /// In ar, this message translates to:
+  /// **'الفيديو غير متاح'**
+  String get videoNotAvailable;
+
+  /// No description provided for @videoNotAvailableDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'الفيديو غير متاح حالياً. يرجى المحاولة مرة أخرى لاحقاً.'**
+  String get videoNotAvailableDesc;
+
+  /// No description provided for @video_loading.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري تحميل الفيديو...'**
+  String get video_loading;
+
+  /// No description provided for @video_error.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدث خطأ أثناء تحميل الفيديو'**
+  String get video_error;
+
+  /// No description provided for @video_retry.
+  ///
+  /// In ar, this message translates to:
+  /// **'إعادة المحاولة'**
+  String get video_retry;
 }
 
 class _AppLocalizationsDelegate

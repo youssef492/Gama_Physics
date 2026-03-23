@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:gama_app/l10n/app_localizations.dart';
+import 'package:GAMA/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
@@ -23,6 +23,9 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
   bool _isExporting = false;
   final FirestoreService _firestoreService = FirestoreService();
 
+  // ─── نحفظ الـ codes اللي عملنالها load titles عشان نتجنب طلبات مكررة ──────
+  final Set<String> _loadedLessonIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -31,10 +34,18 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
     data.listenToAllPaidLessons();
   }
 
-  Future<void> _loadLessonTitles(List<AccessCode> codes) async {
-    final ids = codes.map((c) => c.lessonId).toSet().toList();
-    final titles = await _firestoreService.getLessonTitles(ids);
-    if (mounted) setState(() => _lessonTitles = titles);
+  // ─── بنناديها بس لو في lesson IDs جديدة ──────────────────────────────────
+  Future<void> _loadNewLessonTitles(List<AccessCode> codes) async {
+    final newIds =
+        codes.map((c) => c.lessonId).toSet().difference(_loadedLessonIds);
+
+    if (newIds.isEmpty) return; // مفيش جديد → مش هنطلب Firestore
+
+    _loadedLessonIds.addAll(newIds);
+    final titles = await _firestoreService.getLessonTitles(newIds.toList());
+    if (mounted) {
+      setState(() => _lessonTitles = {..._lessonTitles, ...titles});
+    }
   }
 
   String _generateCode(int length) {
@@ -55,7 +66,7 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
         lessonTitles: _lessonTitles,
         isArabic: isArabic,
       );
-      if (mounted) {
+      if (context.mounted) {
         showDialog(
           context: context,
           builder: (_) => ExportSuccessDialog(
@@ -65,7 +76,7 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
         );
       }
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Export failed: $e')),
         );
@@ -80,7 +91,10 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
     final l10n = AppLocalizations.of(context)!;
     final data = context.watch<DataProvider>();
 
-    if (data.codes.isNotEmpty) _loadLessonTitles(data.codes);
+    // ─── بنناديها هنا بس لو فعلاً في IDs جديدة ───────────────────────────
+    if (data.codes.isNotEmpty) {
+      _loadNewLessonTitles(data.codes);
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -125,6 +139,7 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                   isExporting: _isExporting,
                   onExport: () => _exportToExcel(context, data.codes),
                 ),
+                _buildLessonSummaries(context, data.codes),
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
@@ -137,6 +152,90 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _buildLessonSummaries(BuildContext context, List<AccessCode> codes) {
+    if (codes.isEmpty) return const SizedBox.shrink();
+
+    final l10n = AppLocalizations.of(context)!;
+
+    final Map<String, List<AccessCode>> grouped = {};
+    for (var code in codes) {
+      grouped.putIfAbsent(code.lessonId, () => []).add(code);
+    }
+
+    final lessons = grouped.entries.toList();
+
+    return SizedBox(
+      height: 100,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: lessons.length,
+        itemBuilder: (context, index) {
+          final lessonId = lessons[index].key;
+          final lessonCodes = lessons[index].value;
+          final title = _lessonTitles[lessonId] ?? '...';
+
+          return Container(
+            width: 180,
+            margin: const EdgeInsetsDirectional.only(end: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryBlue.withAlpha(20),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.primaryBlue.withAlpha(40)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryBlue,
+                    fontSize: 14,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${lessonCodes.length} ${l10n.codes}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textDark,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => _exportToExcel(context, lessonCodes),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.successGreen.withAlpha(30),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.file_download_outlined,
+                          size: 16,
+                          color: AppTheme.successGreen,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -269,7 +368,6 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                       },
                       tooltip: l10n.copy,
                     ),
-                    // ← Per-code expiry edit
                     IconButton(
                       icon: const Icon(Icons.edit_calendar,
                           color: AppTheme.primaryBlue, size: 20),
@@ -301,7 +399,7 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
     );
   }
 
-  // ─── Bulk expiry dialog (by lesson) ──────────────────────────────────────────
+  // ─── Bulk expiry dialog ────────────────────────────────────────────────────
   void _showBulkExpiryDialog(BuildContext context, DataProvider data) {
     final l10n = AppLocalizations.of(context)!;
     final paidLessons = data.allPaidLessons;
@@ -317,9 +415,10 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
             children: [
-              Icon(Icons.edit_calendar, color: AppTheme.primaryBlue, size: 22),
-              SizedBox(width: 10),
-              Text(l10n.editExpiryTitle, style: TextStyle(fontSize: 16)),
+              const Icon(Icons.edit_calendar,
+                  color: AppTheme.primaryBlue, size: 22),
+              const SizedBox(width: 10),
+              Text(l10n.editExpiryTitle, style: const TextStyle(fontSize: 16)),
             ],
           ),
           content: SingleChildScrollView(
@@ -329,18 +428,19 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
               children: [
                 Text(
                   l10n.bulkExpirySubtitle,
-                  style: TextStyle(fontSize: 13, color: AppTheme.textMuted),
+                  style:
+                      const TextStyle(fontSize: 13, color: AppTheme.textMuted),
                 ),
                 const SizedBox(height: 16),
                 if (paidLessons.isEmpty)
                   Text(l10n.noPaidLessons,
-                      style: TextStyle(color: AppTheme.errorRed))
+                      style: const TextStyle(color: AppTheme.errorRed))
                 else
                   DropdownButtonFormField<String>(
                     initialValue: selectedLessonId,
                     decoration: InputDecoration(
                       labelText: l10n.lessonDropdownLabel,
-                      prefixIcon: Icon(Icons.play_lesson),
+                      prefixIcon: const Icon(Icons.play_lesson),
                     ),
                     isExpanded: true,
                     items: paidLessons
@@ -353,7 +453,6 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                     onChanged: (v) => setS(() => selectedLessonId = v),
                   ),
                 const SizedBox(height: 16),
-                // Date picker tile
                 InkWell(
                   onTap: () async {
                     final picked = await showDatePicker(
@@ -420,13 +519,13 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Icon(Icons.warning_amber,
+                      const Icon(Icons.warning_amber,
                           color: AppTheme.warningOrange, size: 16),
-                      SizedBox(width: 6),
+                      const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           l10n.pastDateWarningBulk,
-                          style: TextStyle(
+                          style: const TextStyle(
                               fontSize: 12, color: AppTheme.warningOrange),
                         ),
                       ),
@@ -455,7 +554,6 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                       ? null
                       : () async {
                           setS(() => isLoading = true);
-                          // نستخدم ctx.mounted بدل mounted لأنا داخل dialog
                           final count = await data.bulkUpdateExpiryByLesson(
                               selectedLessonId!, pickedDate);
                           if (ctx.mounted) {
@@ -476,7 +574,7 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
     );
   }
 
-  // ─── Single code expiry dialog ────────────────────────────────────────────
+  // ─── Single code expiry dialog ─────────────────────────────────────────────
   void _showSingleExpiryDialog(
       BuildContext context, DataProvider data, AccessCode code) {
     final l10n = AppLocalizations.of(context)!;
@@ -492,16 +590,17 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Row(
             children: [
-              Icon(Icons.edit_calendar, color: AppTheme.primaryBlue, size: 22),
-              SizedBox(width: 10),
-              Text(l10n.editExpirySingleTitle, style: TextStyle(fontSize: 16)),
+              const Icon(Icons.edit_calendar,
+                  color: AppTheme.primaryBlue, size: 22),
+              const SizedBox(width: 10),
+              Text(l10n.editExpirySingleTitle,
+                  style: const TextStyle(fontSize: 16)),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Code info
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -530,7 +629,6 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Date picker
               InkWell(
                 onTap: () async {
                   final picked = await showDatePicker(
@@ -595,13 +693,13 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.warning_amber,
+                    const Icon(Icons.warning_amber,
                         color: AppTheme.warningOrange, size: 16),
-                    SizedBox(width: 6),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         l10n.pastDateWarningSingle,
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontSize: 12, color: AppTheme.warningOrange),
                       ),
                     ),
@@ -649,6 +747,7 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
     );
   }
 
+  // ─── Generate codes dialog ─────────────────────────────────────────────────
   void _showGenerateDialog(BuildContext context, DataProvider data) {
     final l10n = AppLocalizations.of(context)!;
     final countController = TextEditingController(text: '1');
@@ -749,7 +848,7 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
   }
 }
 
-// ─── Export Banner Widget ──────────────────────────────────────────────────────
+// ─── Export Banner ────────────────────────────────────────────────────────────
 class _ExportBanner extends StatelessWidget {
   final int codesCount;
   final bool isExporting;

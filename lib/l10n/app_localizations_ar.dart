@@ -177,6 +177,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get deleteAccount => 'حذف الحساب نهائياً';
 
   @override
+  String get deleteAnnouncementConfirm => 'هل أنت متأكد من حذف هذا الإعلان؟';
+
+  @override
+  String get announcements => 'الإعلانات';
+
+  @override
+  String get newAnnouncement => 'إعلان جديد';
+
+  @override
+  String get announcementTitle => 'عنوان الإعلان';
+
+  @override
+  String get announcementContent => 'نص الإعلان';
+
+  @override
+  String get noAnnouncements => 'لا توجد إعلانات حالياً';
+
+  @override
+  String get announcementAdded => 'تم إضافة الإعلان بنجاح';
+
+  @override
+  String get announcementDeleted => 'تم حذف الإعلان بنجاح';
+
+  @override
   String get deleteStudentConfirm => 'هل أنت متأكد من حذف حساب';
 
   @override
@@ -472,4 +496,89 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get gradeAlreadyCurrent => 'هذه هي مرحلتك الحالية';
+
+  @override
+  String get playbackSpeed => 'سرعة التشغيل';
+
+  @override
+  String get videoQuality => 'جودة الفيديو';
+
+  @override
+  String get skipForward10 => '+10 ثانية';
+
+  @override
+  String get skipBackward10 => '-10 ثانية';
+
+  @override
+  String get attendance => 'الغياب';
+
+  @override
+  String get takeAttendance => 'أخذ الغياب';
+
+  @override
+  String get newSession => 'حصة جديدة';
+
+  @override
+  String get scanQrCode => 'مسح كود QR او Barcode';
+
+  @override
+  String get searchStudent => 'البحث عن طالب بالاسم أو الرقم...';
+
+  @override
+  String get markPresent => 'تسجيل حضور';
+
+  @override
+  String get presentStudents => 'الطلاب الحاضرون';
+
+  @override
+  String get removeFromSession => 'إزالة من الحصة';
+
+  @override
+  String get sessionDate => 'تاريخ الحصة';
+
+  @override
+  String get sessionTitle => 'اسم الحصة (اختياري)';
+
+  @override
+  String get endSession => 'إنهاء الحصة';
+
+  @override
+  String get sessionPrice => 'سعر الحصة للطالب';
+
+  @override
+  String get studentPayment => 'دفع الطالب';
+
+  @override
+  String get generatePdf => 'إنشاء PDF';
+
+  @override
+  String get paidAmount => 'المبلغ المدفوع';
+
+  @override
+  String get notPaid => 'لم يدفع';
+
+  @override
+  String get savePdf => 'حفظ ومشاركة PDF';
+
+  @override
+  String get confirmEndSession => 'تأكيد إنهاء الحصة؟';
+
+  @override
+  String get sessionEndedSuccess => 'تم إنهاء الحصة بنجاح!';
+
+  @override
+  String get videoNotAvailable => 'الفيديو غير متاح';
+
+  @override
+  String get videoNotAvailableDesc =>
+      'الفيديو غير متاح حالياً. يرجى المحاولة مرة أخرى لاحقاً.';
+
+  @override
+  String get video_loading => 'جاري تحميل الفيديو...';
+
+  @override
+  String get video_error => 'حدث خطأ أثناء تحميل الفيديو';
+
+  @override
+  String get video_retry => 'إعادة المحاولة';
 }

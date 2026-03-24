@@ -29,6 +29,7 @@ dependencies:
   qr_flutter: ^4.1.0
   media_kit: ^1.1.11
   media_kit_video: ^1.2.4
+  media_kit_libs_video: ^1.0.7
   media_kit_libs_android_video: ^1.0.4
   media_kit_libs_ios_video: ^1.0.4
   youtube_explode_dart: ^2.3.5

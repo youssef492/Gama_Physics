@@ -209,7 +209,7 @@ class FirestoreService {
         .where('code', isEqualTo: codeString)
         .where('lessonId', isEqualTo: lessonId)
         .limit(1)
-        .get();
+        .get(const GetOptions(source: Source.server));
 
     if (query.docs.isEmpty) return false;
 
@@ -217,24 +217,33 @@ class FirestoreService {
     final code = AccessCode.fromSnapshot(doc);
 
     if (code.status == 'disabled') return false;
+    if (code.isExpired) return false;
+    if (code.isFullyUsed) return false;
 
     final alreadyMine = code.usedBy.any((u) => u.studentId == studentId);
-    if (alreadyMine) return true;
 
-    if (code.isExpired) return false;
-    if (code.isFullyUsed) return false; // currentUses >= maxUses
+    // ✅ طالب تاني استخدمه قبل كده → مرفوض
+    if (!alreadyMine && code.usedBy.isNotEmpty) return false;
 
-    await doc.reference.update({
-      'currentUses': FieldValue.increment(1),
-      'usedBy': FieldValue.arrayUnion([
-        {
-          'studentId': studentId,
-          'studentName': studentName,
-          'usedAt': Timestamp.now(),
-        }
-      ]),
-      'status': (code.currentUses + 1 >= code.maxUses) ? 'used' : 'active',
-    });
+    if (alreadyMine) {
+      // ✅ نفس الطالب → زود currentUses بس
+      await doc.reference.update({
+        'currentUses': FieldValue.increment(1),
+      });
+    } else {
+      // ✅ أول استخدام → أضف للـ usedBy وزود currentUses
+      await doc.reference.update({
+        'currentUses': FieldValue.increment(1),
+        'usedBy': FieldValue.arrayUnion([
+          {
+            'studentId': studentId,
+            'studentName': studentName,
+            'usedAt': Timestamp.now(),
+          }
+        ]),
+        'status': (code.currentUses + 1 >= code.maxUses) ? 'used' : 'active',
+      });
+    }
 
     return true;
   }

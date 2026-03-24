@@ -216,22 +216,14 @@ class FirestoreService {
     final doc = query.docs.first;
     final code = AccessCode.fromSnapshot(doc);
 
-    // كود معطل صراحةً من المدرس
     if (code.status == 'disabled') return false;
 
-    // ─── نفس الطالب استخدمه قبل كده → ادخله على طول بدون DB update ───
     final alreadyMine = code.usedBy.any((u) => u.studentId == studentId);
     if (alreadyMine) return true;
 
-    // ─── طالب تاني استخدمه → error ───
-    if (code.usedBy.isNotEmpty) {
-      throw Exception('used_by_another_student');
-    }
-
-    // ─── أول مرة يُستخدم: تحقق من الصلاحية ───
     if (code.isExpired) return false;
+    if (code.isFullyUsed) return false; // currentUses >= maxUses
 
-    // سجّل في Firestore واقفل الكود للطالب ده
     await doc.reference.update({
       'currentUses': FieldValue.increment(1),
       'usedBy': FieldValue.arrayUnion([
@@ -241,7 +233,7 @@ class FirestoreService {
           'usedAt': Timestamp.now(),
         }
       ]),
-      'status': 'used', // مش active تاني، محجوز لطالب واحد
+      'status': (code.currentUses + 1 >= code.maxUses) ? 'used' : 'active',
     });
 
     return true;
@@ -268,6 +260,33 @@ class FirestoreService {
       'expiresAt': newExpiry != null ? Timestamp.fromDate(newExpiry) : null,
       'status': newStatus,
     });
+  }
+
+  /// Delete all codes for a specific lesson
+  Future<int> deleteCodesByLesson(String lessonId) async {
+    final snap = await _db
+        .collection('accessCodes')
+        .where('lessonId', isEqualTo: lessonId)
+        .get();
+
+    if (snap.docs.isEmpty) return 0;
+
+    final batches = <WriteBatch>[];
+    WriteBatch batch = _db.batch();
+    int count = 0;
+
+    for (final doc in snap.docs) {
+      batch.delete(doc.reference);
+      count++;
+      if (count % 499 == 0) {
+        batches.add(batch);
+        batch = _db.batch();
+      }
+    }
+    batches.add(batch);
+    for (final b in batches) await b.commit();
+
+    return snap.docs.length;
   }
 
   /// تعديل تاريخ انتهاء كل أكواد درس معين دفعة واحدة (Batch Write)

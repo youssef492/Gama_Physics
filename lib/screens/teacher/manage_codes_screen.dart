@@ -89,6 +89,7 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isArabic = context.read<LanguageProvider>().isArabic;
     final l10n = AppLocalizations.of(context)!;
     final data = context.watch<DataProvider>();
 
@@ -122,6 +123,11 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                     tooltip: l10n.exportExcel,
                     onPressed: () => _exportToExcel(context, data.codes),
                   ),
+            IconButton(
+              icon: const Icon(Icons.delete_sweep_outlined),
+              tooltip: isArabic ? 'حذف أكواد درس' : 'Delete lesson codes',
+              onPressed: () => _showDeleteByLessonDialog(context, data),
+            ),
           ],
         ],
       ),
@@ -739,6 +745,114 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                             backgroundColor: AppTheme.successGreen,
                           ),
                         );
+                      }
+                    },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteByLessonDialog(BuildContext context, DataProvider data) {
+    final isArabic = context.read<LanguageProvider>().isArabic;
+    final l10n = AppLocalizations.of(context)!;
+    final paidLessons = data.allPaidLessons;
+    String? selectedLessonId;
+    bool isLoading = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.delete_sweep,
+                  color: AppTheme.errorRed, size: 22),
+              const SizedBox(width: 10),
+              Text(
+                isArabic ? 'حذف أكواد درس' : 'Delete lesson codes',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (paidLessons.isEmpty)
+                Text(l10n.noPaidLessons,
+                    style: const TextStyle(color: AppTheme.errorRed))
+              else
+                DropdownButtonFormField<String>(
+                  initialValue: selectedLessonId,
+                  decoration:
+                      InputDecoration(labelText: l10n.lessonDropdownLabel),
+                  isExpanded: true,
+                  items: paidLessons
+                      .map((l) => DropdownMenuItem(
+                            value: l.id,
+                            child:
+                                Text(l.title, overflow: TextOverflow.ellipsis),
+                          ))
+                      .toList(),
+                  onChanged: (v) => setS(() => selectedLessonId = v),
+                ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.errorRed.withAlpha(15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.errorRed.withAlpha(50)),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.warning_amber_rounded,
+                        color: AppTheme.errorRed, size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'سيتم حذف كل الأكواد المرتبطة بهذا الدرس نهائياً.',
+                        style:
+                            TextStyle(fontSize: 12, color: AppTheme.errorRed),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton.icon(
+              icon: isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.delete_forever, size: 18),
+              label: Text(l10n.deleteBtn),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.errorRed,
+                  foregroundColor: Colors.white),
+              onPressed: (selectedLessonId == null || isLoading)
+                  ? null
+                  : () async {
+                      setS(() => isLoading = true);
+                      final count =
+                          await data.deleteCodesByLesson(selectedLessonId!);
+                      if (ctx.mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('تم حذف $count كود بنجاح'),
+                          backgroundColor: AppTheme.successGreen,
+                        ));
                       }
                     },
             ),

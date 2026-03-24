@@ -419,4 +419,13 @@ class DataProvider with ChangeNotifier {
       _handleError(e);
     }
   }
+
+  Future<int> deleteCodesByLesson(String lessonId) async {
+    try {
+      return await _firestoreService.deleteCodesByLesson(lessonId);
+    } catch (e) {
+      _handleError(e);
+      return 0;
+    }
+  }
 }

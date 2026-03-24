@@ -69,15 +69,18 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   bool _viewRecorded = false;
 
   static const _speeds = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0];
- 
+
   @override
   void initState() {
     super.initState();
     _player = Player();
     _controller = VideoController(_player);
     _loadVideo();
-    // عدّ المشاهدة عند "دخول" الطالب للصفحة (مرة واحدة لكل Widget instance).
-    WidgetsBinding.instance.addPostFrameCallback((_) => _recordViewOnce());
+
+    // ✅ سجّل لما الفيديو يبدأ يشتغل فعلاً (مرة واحدة بس)
+    _player.stream.playing.listen((isPlaying) {
+      if (isPlaying) _recordViewOnce();
+    });
   }
 
   @override
@@ -144,10 +147,12 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   void _recordViewOnce() {
     if (_viewRecorded) return;
-    if (widget.lessonId.isEmpty) return;
+    if (widget.lessonId.isEmpty) return; // مش student
     if (widget.studentId.isEmpty) return;
 
     _viewRecorded = true;
+    debugPrint(
+        '[VideoPlayer] Recording view: lesson=${widget.lessonId}, student=${widget.studentId}');
     VideoViewService.recordView(
       lessonId: widget.lessonId,
       studentId: widget.studentId,
@@ -212,12 +217,36 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       _selectedQualityLabel = option.label;
       _loadState = _VideoLoadState.buffering;
     });
+
     final pos = _player.state.position;
     final wasPlaying = _player.state.playing;
-    await _player.open(Media(option.url), play: false);
-    await _player.seek(pos);
-    if (wasPlaying) await _player.play();
-    if (mounted) setState(() => _loadState = _VideoLoadState.ready);
+
+    try {
+      // ✅ جيب URLs فريشة عشان محتمل تكون expired
+      final result = await YoutubeService.getStreamUrl(
+        widget.rawVideoUrl,
+        retryCount: 1,
+      );
+
+      final chosen =
+          result.allStreams.where((q) => q.label == option.label).firstOrNull;
+      final url = chosen?.url ?? option.url;
+
+      // ✅ حدّث الـ quality options بالـ URLs الجديدة
+      setState(() => _qualityOptions = result.allStreams);
+
+      await _player.open(Media(url), play: false);
+      await _player.seek(pos);
+      if (wasPlaying) await _player.play();
+      if (mounted) setState(() => _loadState = _VideoLoadState.ready);
+    } catch (_) {
+      // fallback: جرب الـ URL القديم
+      await _player.open(Media(option.url), play: false);
+      await _player.seek(pos);
+      if (wasPlaying) await _player.play();
+      if (mounted) setState(() => _loadState = _VideoLoadState.ready);
+    }
+
     _resetTimer();
   }
 
@@ -388,16 +417,18 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   }
 
   Widget _buildOverlay() {
+    final l10n = AppLocalizations.of(context)!;
+
     switch (_loadState) {
       case _VideoLoadState.fetchingUrl:
         return _LoadingOverlay(
           key: const ValueKey('fetch'),
-          message: 'جاري تجهيز الفيديو',
+          message: l10n.preparingVideo,
         );
       case _VideoLoadState.buffering:
         return _LoadingOverlay(
           key: const ValueKey('buffer'),
-          message: 'جاري التحميل',
+          message: l10n.loading,
           progressStream: _player.stream.buffer.map((buf) {
             final dur = _player.state.duration;
             if (dur.inMilliseconds == 0) return 0.0;
@@ -408,22 +439,22 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         return _ErrorOverlay(
             key: const ValueKey('slow'),
             icon: Icons.signal_cellular_alt_rounded,
-            title: 'الشبكة بطيئة',
-            subtitle: 'النت بطيء شوية، حاول تاني أو انتظر',
+            title: l10n.slowNetwork,
+            subtitle: l10n.slowNetworkDesc,
             onRetry: _loadVideo);
       case _VideoLoadState.errorOffline:
         return _ErrorOverlay(
             key: const ValueKey('offline'),
             icon: Icons.wifi_off_rounded,
-            title: 'لا يوجد اتصال بالإنترنت',
-            subtitle: 'تحقق من الاتصال وحاول مرة أخرى',
+            title: l10n.noInternet,
+            subtitle: l10n.noInternetDesc,
             onRetry: _loadVideo);
       case _VideoLoadState.errorOther:
         return _ErrorOverlay(
             key: const ValueKey('error'),
             icon: Icons.play_circle_outline_rounded,
-            title: 'تعذر تشغيل الفيديو',
-            subtitle: 'حاول مرة أخرى',
+            title: l10n.cannotPlayVideo,
+            subtitle: l10n.cannotPlayVideoDesc,
             onRetry: _loadVideo);
       case _VideoLoadState.ready:
         return const SizedBox.shrink(key: ValueKey('ready'));
@@ -561,23 +592,28 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     if (widget.progressStream != null) {
       // Buffering → real progress
       return StreamBuilder<double>(
         stream: widget.progressStream,
         initialData: 0.0,
-        builder: (_, snap) => _buildContent(snap.data ?? 0.0, isReal: true),
+        builder: (_, snap) =>
+            _buildContent(snap.data ?? 0.0, isReal: true, l10n: l10n),
       );
     }
 
     // Fetching URL → fake animated progress
     return AnimatedBuilder(
       animation: _fakeProgress,
-      builder: (_, __) => _buildContent(_fakeProgress.value, isReal: false),
+      builder: (_, __) =>
+          _buildContent(_fakeProgress.value, isReal: false, l10n: l10n),
     );
   }
 
-  Widget _buildContent(double value, {required bool isReal}) {
+  Widget _buildContent(double value,
+      {required bool isReal, required AppLocalizations l10n}) {
     final pct = (value * 100).toInt();
     final percentStr = ' $pct%';
 
@@ -605,10 +641,10 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
             const SizedBox(height: 12),
             Text(
               pct < 35
-                  ? 'جاري استخراج الرابط...'
+                  ? l10n.extractingLink
                   : pct < 65
-                      ? 'جاري التحضير للتشغيل...'
-                      : 'تقريبًا جاهز...',
+                      ? l10n.preparingPlayback
+                      : l10n.almostReady,
               style: const TextStyle(color: Colors.white54, fontSize: 12),
             ),
           ],
@@ -633,6 +669,8 @@ class _ErrorOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Container(
       color: Colors.black87,
       padding: const EdgeInsets.all(24),
@@ -655,7 +693,7 @@ class _ErrorOverlay extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh_rounded),
-            label: const Text('إعادة المحاولة'),
+            label: Text(l10n.retry),
             style: ElevatedButton.styleFrom(
               backgroundColor: _kPrimary,
               foregroundColor: Colors.white,

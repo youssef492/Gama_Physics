@@ -581,4 +581,132 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get video_retry => 'إعادة المحاولة';
+
+  @override
+  String get error => 'خطأ';
+
+  @override
+  String get lessonNotFound => 'الدرس غير موجود';
+
+  @override
+  String get lessonViewers => 'مشاهدو الدرس';
+
+  @override
+  String get failedToLoadData => 'حدث خطأ في تحميل البيانات';
+
+  @override
+  String get noLessonViewers => 'لم يشاهد أحد هذا الدرس بعد';
+
+  @override
+  String get studentWatched => 'طالب شاهد';
+
+  @override
+  String get totalViews => 'إجمالي المشاهدات';
+
+  @override
+  String get firstWatch => 'أول مشاهدة';
+
+  @override
+  String get lastWatch => 'آخر مشاهدة';
+
+  @override
+  String get preparingVideo => 'جاري تجهيز الفيديو';
+
+  @override
+  String get slowNetwork => 'الشبكة بطيئة';
+
+  @override
+  String get slowNetworkDesc => 'النت بطيء شوية، حاول تاني أو انتظر';
+
+  @override
+  String get noInternet => 'لا يوجد اتصال بالإنترنت';
+
+  @override
+  String get noInternetDesc => 'تحقق من الاتصال وحاول مرة أخرى';
+
+  @override
+  String get cannotPlayVideo => 'تعذر تشغيل الفيديو';
+
+  @override
+  String get cannotPlayVideoDesc => 'حاول مرة أخرى';
+
+  @override
+  String get extractingLink => 'جاري استخراج الرابط...';
+
+  @override
+  String get preparingPlayback => 'جاري التحضير للتشغيل...';
+
+  @override
+  String get almostReady => 'تقريبًا جاهز...';
+
+  @override
+  String get exportExcel => 'تصدير Excel';
+
+  @override
+  String exportFailed(String error) {
+    return 'فشل التصدير: $error';
+  }
+
+  @override
+  String get present => 'حاضر';
+
+  @override
+  String get studentNotFound => 'طالب غير موجود';
+
+  @override
+  String get searchAndAddStudent => 'ابحث عن طالب وأضفه';
+
+  @override
+  String get exportSuccess => 'تم التصدير بنجاح!';
+
+  @override
+  String get fileSavedInDownloads =>
+      'الملف محفوظ في Downloads\nافتحه من تطبيق Files';
+
+  @override
+  String get ok => 'حسناً';
+
+  @override
+  String timesWatched(int count) {
+    return '$count× شاهد';
+  }
+
+  @override
+  String get qrCode => 'كود QR';
+
+  @override
+  String get studentCodeLabel => 'كود الطالب';
+
+  @override
+  String get generatingCode => 'جاري إنشاء الكود...';
+
+  @override
+  String get noCodeYet => 'لا يوجد كود بعد';
+
+  @override
+  String get view => 'عرض';
+
+  @override
+  String get errorLoadingSessions => 'خطأ في تحميل الحصص';
+
+  @override
+  String get noSessionsYet => 'لا توجد حصص بعد';
+
+  @override
+  String get youtube => 'YouTube';
+
+  @override
+  String get googleDrive => 'Google Drive';
+
+  @override
+  String get newLabel => 'جديد';
+
+  @override
+  String get exportPdf => 'تصدير PDF';
+
+  @override
+  String get all => 'الكل';
+
+  @override
+  String get fullScreen => 'عرض كامل';
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gama/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 import '../../config/theme.dart';
 import '../../models/lesson.dart';
@@ -11,19 +12,20 @@ class LessonViewersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lesson = ModalRoute.of(context)?.settings.arguments as Lesson?;
+    final l10n = AppLocalizations.of(context)!;
 
     if (lesson == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Error')),
-        body: const Center(child: Text('Lesson not found')),
+        appBar: AppBar(title: Text(l10n.error)),
+        body: Center(child: Text(l10n.lessonNotFound)),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'مشاهدو الدرس',
-          style: TextStyle(fontSize: 16),
+        title: Text(
+          l10n.lessonViewers,
+          style: const TextStyle(fontSize: 16),
         ),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(36),
@@ -45,9 +47,7 @@ class LessonViewersScreen extends StatelessWidget {
       body: StreamBuilder<List<VideoView>>(
         stream: VideoViewService.getViewsForLesson(lesson.id),
         builder: (context, snap) {
-          // ✅ تحسين: معالجة حالات الأخطاء بشكل أفضل
           if (snap.hasError) {
-            debugPrint('[LessonViewers] Stream error: ${snap.error}');
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -55,9 +55,10 @@ class LessonViewersScreen extends StatelessWidget {
                   const Icon(Icons.error_outline,
                       size: 56, color: Colors.redAccent),
                   const SizedBox(height: 16),
-                  const Text(
-                    'حدث خطأ في تحميل البيانات',
-                    style: TextStyle(color: AppTheme.textMuted, fontSize: 15),
+                  Text(
+                    l10n.failedToLoadData,
+                    style: const TextStyle(
+                        color: AppTheme.textMuted, fontSize: 15),
                   ),
                   const SizedBox(height: 12),
                   ElevatedButton.icon(
@@ -66,7 +67,7 @@ class LessonViewersScreen extends StatelessWidget {
                       (context as Element).markNeedsBuild();
                     },
                     icon: const Icon(Icons.refresh),
-                    label: const Text('إعادة المحاولة'),
+                    label: Text(l10n.retry),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryBlue,
                       foregroundColor: Colors.white,
@@ -80,15 +81,16 @@ class LessonViewersScreen extends StatelessWidget {
           // ✅ تحسين: نعرض loading فقط لو waiting والبيانات مش موجودة
           if (snap.connectionState == ConnectionState.waiting &&
               !snap.hasData) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
                   Text(
-                    'جاري تحميل البيانات...',
-                    style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+                    l10n.loading,
+                    style: const TextStyle(
+                        color: AppTheme.textMuted, fontSize: 14),
                   ),
                 ],
               ),
@@ -108,9 +110,10 @@ class LessonViewersScreen extends StatelessWidget {
                   Icon(Icons.play_circle_outline,
                       size: 72, color: AppTheme.textMuted.withAlpha(80)),
                   const SizedBox(height: 16),
-                  const Text(
-                    'لم يشاهد أحد هذا الدرس بعد',
-                    style: TextStyle(color: AppTheme.textMuted, fontSize: 15),
+                  Text(
+                    l10n.noLessonViewers,
+                    style: const TextStyle(
+                        color: AppTheme.textMuted, fontSize: 15),
                   ),
                 ],
               ),
@@ -137,7 +140,7 @@ class LessonViewersScreen extends StatelessWidget {
                   children: [
                     _StatChip(
                       icon: Icons.people_outline,
-                      label: 'طالب شاهد',
+                      label: l10n.studentWatched,
                       value: '${views.length}',
                       color: AppTheme.primaryBlue,
                     ),
@@ -149,7 +152,7 @@ class LessonViewersScreen extends StatelessWidget {
                     const SizedBox(width: 16),
                     _StatChip(
                       icon: Icons.remove_red_eye_outlined,
-                      label: 'إجمالي المشاهدات',
+                      label: l10n.totalViews,
                       value: '$totalWatches',
                       color: AppTheme.accentCyan,
                     ),
@@ -233,8 +236,10 @@ class _ViewerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fmt = DateFormat('d MMM yyyy  HH:mm', 'ar');
-    final fmtShort = DateFormat('d/M/yyyy', 'ar');
+    final locale = Localizations.localeOf(context).languageCode;
+    final l10n = AppLocalizations.of(context)!;
+    final fmt = DateFormat('d MMM yyyy  hh:mm a', locale);
+    final fmtShort = DateFormat('d/M/yyyy', locale);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -296,7 +301,7 @@ class _ViewerCard extends StatelessWidget {
                                 color: AppTheme.accentCyan.withAlpha(80)),
                           ),
                           child: Text(
-                            '${view.watchCount}× شاهد',
+                            l10n.timesWatched(view.watchCount),
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -355,7 +360,7 @@ class _ViewerCard extends StatelessWidget {
                       children: [
                         _DateRow(
                           icon: Icons.play_arrow_rounded,
-                          label: 'أول مشاهدة',
+                          label: l10n.firstWatch,
                           value: fmtShort.format(view.firstWatchedAt),
                           color: AppTheme.freeGreen,
                         ),
@@ -363,7 +368,7 @@ class _ViewerCard extends StatelessWidget {
                           const SizedBox(height: 4),
                           _DateRow(
                             icon: Icons.update_rounded,
-                            label: 'آخر مشاهدة',
+                            label: l10n.lastWatch,
                             value: fmt.format(view.lastWatchedAt),
                             color: AppTheme.primaryBlue,
                           ),

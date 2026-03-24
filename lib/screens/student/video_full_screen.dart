@@ -218,13 +218,35 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
       _selectedQualityLabel = option.label;
       _isLoading = true;
     });
+
     final pos = _player.state.position;
     final wasPlaying = _player.state.playing;
-    await _player.open(Media(option.url), play: false);
-    await _player.seek(pos);
-    if (wasPlaying) await _player.play();
-    await _player.setRate(_speed);
-    if (mounted) setState(() => _isLoading = false);
+
+    try {
+      final result = await YoutubeService.getStreamUrl(
+        widget.videoId!,
+        retryCount: 1,
+      );
+
+      final chosen =
+          result.allStreams.where((q) => q.label == option.label).firstOrNull;
+      final url = chosen?.url ?? option.url;
+
+      setState(() => _qualityOptions = result.allStreams);
+
+      await _player.open(Media(url), play: false);
+      await _player.seek(pos);
+      if (wasPlaying) await _player.play();
+      await _player.setRate(_speed);
+      if (mounted) setState(() => _isLoading = false);
+    } catch (_) {
+      await _player.open(Media(option.url), play: false);
+      await _player.seek(pos);
+      if (wasPlaying) await _player.play();
+      await _player.setRate(_speed);
+      if (mounted) setState(() => _isLoading = false);
+    }
+
     _resetTimer();
   }
 
@@ -480,19 +502,16 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
 // ─────────────────────────────────────────────────────────────────────────────
 // VLC Bar Fullscreen
 // ─────────────────────────────────────────────────────────────────────────────
-
 class _VlcBarFS extends StatelessWidget {
   final double progress;
-  final int currentSec;
-  final int totalSec;
+  final int currentSec, totalSec;
   final double speed;
   final String qualityLabel;
-  final VoidCallback onExit;
-  final VoidCallback onSpeedTap;
+  final VoidCallback onExit, onSpeedTap;
   final VoidCallback? onQualityTap;
-  final ValueChanged<double> onSliderChanged;
-  final ValueChanged<double> onSliderChangeStart;
-  final ValueChanged<double> onSliderChangeEnd;
+  final ValueChanged<double> onSliderChanged,
+      onSliderChangeStart,
+      onSliderChangeEnd;
 
   const _VlcBarFS({
     required this.progress,
@@ -509,89 +528,62 @@ class _VlcBarFS extends StatelessWidget {
   });
 
   String _fmt(int s) {
-    final m = (s ~/ 60).toString().padLeft(2, '0');
-    final sec = (s % 60).toString().padLeft(2, '0');
-    return '$m:$sec';
+    final h = s ~/ 3600;
+    final m = (s % 3600) ~/ 60;
+    final sec = s % 60;
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}';
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.bottomCenter,
-          end: Alignment.topCenter,
-          colors: [Colors.black87, Colors.transparent],
-        ),
-      ),
-      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Slider
-          SizedBox(
+          gradient: LinearGradient(
+              begin: Alignment.bottomCenter,
+              end: Alignment.topCenter,
+              colors: [Colors.black87, Colors.transparent])),
+      padding: const EdgeInsets.fromLTRB(6, 6, 6, 4),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        SizedBox(
             height: 24,
             child: SliderTheme(
               data: SliderTheme.of(context).copyWith(
-                trackHeight: 3,
-                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                overlayShape: const RoundSliderOverlayShape(overlayRadius: 13),
+                trackHeight: 2.5,
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 5),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 11),
                 activeTrackColor: _kPrimary,
                 inactiveTrackColor: Colors.white30,
                 thumbColor: _kPrimary,
-                overlayColor: _kPrimary.withAlpha(50),
+                overlayColor: const Color(0x330D6EBE),
               ),
               child: Slider(
-                value: progress,
-                onChangeStart: onSliderChangeStart,
-                onChanged: onSliderChanged,
-                onChangeEnd: onSliderChangeEnd,
-              ),
-            ),
-          ),
-
-          // Controls row
-          Row(
-            children: [
-              Text(
-                '${_fmt(currentSec)} / ${_fmt(totalSec)}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontFamily: 'monospace',
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const Spacer(),
-              _ChipBtn(
-                label: speed == 1.0 ? '1x' : '${speed}x',
-                onTap: onSpeedTap,
-              ),
-              const SizedBox(width: 8),
-              if (onQualityTap != null) ...[
-                _ChipBtn(label: qualityLabel, onTap: onQualityTap!),
-                const SizedBox(width: 14),
-              ],
-              GestureDetector(
-                onTap: onExit,
-                child: const Padding(
+                  value: progress,
+                  onChangeStart: onSliderChangeStart,
+                  onChanged: onSliderChanged,
+                  onChangeEnd: onSliderChangeEnd),
+            )),
+        Row(children: [
+          Text('${_fmt(currentSec)} / ${_fmt(totalSec)}',
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 10, fontFamily: 'monospace')),
+          const Spacer(),
+          _ChipBtn(label: speed == 1.0 ? '1x' : '${speed}x', onTap: onSpeedTap),
+          const SizedBox(width: 6),
+          if (onQualityTap != null)
+            _ChipBtn(label: qualityLabel, onTap: onQualityTap!),
+          const SizedBox(width: 10),
+          GestureDetector(
+              onTap: onExit,
+              child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 3, vertical: 4),
-                  child: Icon(
-                    Icons.fullscreen_exit_rounded,
-                    color: Colors.white,
-                    size: 26,
-                    shadows: [Shadow(color: Colors.black38, blurRadius: 6)],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+                  child: Icon(Icons.fullscreen_exit_rounded,
+                      color: Colors.white, size: 22))),
+        ]),
+        const SizedBox(height: 2),
+      ]),
     );
   }
 }
-
 // ─── Chip button ──────────────────────────────────────────────────────────────
 
 class _ChipBtn extends StatelessWidget {

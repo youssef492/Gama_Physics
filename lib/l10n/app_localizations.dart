@@ -1219,6 +1219,252 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'إعادة المحاولة'**
   String get video_retry;
+
+  /// No description provided for @error.
+  ///
+  /// In ar, this message translates to:
+  /// **'خطأ'**
+  String get error;
+
+  /// No description provided for @lessonNotFound.
+  ///
+  /// In ar, this message translates to:
+  /// **'الدرس غير موجود'**
+  String get lessonNotFound;
+
+  /// No description provided for @lessonViewers.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشاهدو الدرس'**
+  String get lessonViewers;
+
+  /// No description provided for @failedToLoadData.
+  ///
+  /// In ar, this message translates to:
+  /// **'حدث خطأ في تحميل البيانات'**
+  String get failedToLoadData;
+
+  /// No description provided for @noLessonViewers.
+  ///
+  /// In ar, this message translates to:
+  /// **'لم يشاهد أحد هذا الدرس بعد'**
+  String get noLessonViewers;
+
+  /// No description provided for @studentWatched.
+  ///
+  /// In ar, this message translates to:
+  /// **'طالب شاهد'**
+  String get studentWatched;
+
+  /// No description provided for @totalViews.
+  ///
+  /// In ar, this message translates to:
+  /// **'إجمالي المشاهدات'**
+  String get totalViews;
+
+  /// No description provided for @firstWatch.
+  ///
+  /// In ar, this message translates to:
+  /// **'أول مشاهدة'**
+  String get firstWatch;
+
+  /// No description provided for @lastWatch.
+  ///
+  /// In ar, this message translates to:
+  /// **'آخر مشاهدة'**
+  String get lastWatch;
+
+  /// No description provided for @preparingVideo.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري تجهيز الفيديو'**
+  String get preparingVideo;
+
+  /// No description provided for @slowNetwork.
+  ///
+  /// In ar, this message translates to:
+  /// **'الشبكة بطيئة'**
+  String get slowNetwork;
+
+  /// No description provided for @slowNetworkDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'النت بطيء شوية، حاول تاني أو انتظر'**
+  String get slowNetworkDesc;
+
+  /// No description provided for @noInternet.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد اتصال بالإنترنت'**
+  String get noInternet;
+
+  /// No description provided for @noInternetDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحقق من الاتصال وحاول مرة أخرى'**
+  String get noInternetDesc;
+
+  /// No description provided for @cannotPlayVideo.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعذر تشغيل الفيديو'**
+  String get cannotPlayVideo;
+
+  /// No description provided for @cannotPlayVideoDesc.
+  ///
+  /// In ar, this message translates to:
+  /// **'حاول مرة أخرى'**
+  String get cannotPlayVideoDesc;
+
+  /// No description provided for @extractingLink.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري استخراج الرابط...'**
+  String get extractingLink;
+
+  /// No description provided for @preparingPlayback.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري التحضير للتشغيل...'**
+  String get preparingPlayback;
+
+  /// No description provided for @almostReady.
+  ///
+  /// In ar, this message translates to:
+  /// **'تقريبًا جاهز...'**
+  String get almostReady;
+
+  /// No description provided for @exportExcel.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصدير Excel'**
+  String get exportExcel;
+
+  /// No description provided for @exportFailed.
+  ///
+  /// In ar, this message translates to:
+  /// **'فشل التصدير: {error}'**
+  String exportFailed(String error);
+
+  /// No description provided for @present.
+  ///
+  /// In ar, this message translates to:
+  /// **'حاضر'**
+  String get present;
+
+  /// No description provided for @studentNotFound.
+  ///
+  /// In ar, this message translates to:
+  /// **'طالب غير موجود'**
+  String get studentNotFound;
+
+  /// No description provided for @searchAndAddStudent.
+  ///
+  /// In ar, this message translates to:
+  /// **'ابحث عن طالب وأضفه'**
+  String get searchAndAddStudent;
+
+  /// No description provided for @exportSuccess.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم التصدير بنجاح!'**
+  String get exportSuccess;
+
+  /// No description provided for @fileSavedInDownloads.
+  ///
+  /// In ar, this message translates to:
+  /// **'الملف محفوظ في Downloads\nافتحه من تطبيق Files'**
+  String get fileSavedInDownloads;
+
+  /// No description provided for @ok.
+  ///
+  /// In ar, this message translates to:
+  /// **'حسناً'**
+  String get ok;
+
+  /// No description provided for @timesWatched.
+  ///
+  /// In ar, this message translates to:
+  /// **'{count}× شاهد'**
+  String timesWatched(int count);
+
+  /// No description provided for @qrCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'كود QR'**
+  String get qrCode;
+
+  /// No description provided for @studentCodeLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'كود الطالب'**
+  String get studentCodeLabel;
+
+  /// No description provided for @generatingCode.
+  ///
+  /// In ar, this message translates to:
+  /// **'جاري إنشاء الكود...'**
+  String get generatingCode;
+
+  /// No description provided for @noCodeYet.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا يوجد كود بعد'**
+  String get noCodeYet;
+
+  /// No description provided for @view.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض'**
+  String get view;
+
+  /// No description provided for @errorLoadingSessions.
+  ///
+  /// In ar, this message translates to:
+  /// **'خطأ في تحميل الحصص'**
+  String get errorLoadingSessions;
+
+  /// No description provided for @noSessionsYet.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد حصص بعد'**
+  String get noSessionsYet;
+
+  /// No description provided for @youtube.
+  ///
+  /// In ar, this message translates to:
+  /// **'YouTube'**
+  String get youtube;
+
+  /// No description provided for @googleDrive.
+  ///
+  /// In ar, this message translates to:
+  /// **'Google Drive'**
+  String get googleDrive;
+
+  /// No description provided for @newLabel.
+  ///
+  /// In ar, this message translates to:
+  /// **'جديد'**
+  String get newLabel;
+
+  /// No description provided for @exportPdf.
+  ///
+  /// In ar, this message translates to:
+  /// **'تصدير PDF'**
+  String get exportPdf;
+
+  /// No description provided for @all.
+  ///
+  /// In ar, this message translates to:
+  /// **'الكل'**
+  String get all;
+
+  /// No description provided for @fullScreen.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض كامل'**
+  String get fullScreen;
 }
 
 class _AppLocalizationsDelegate

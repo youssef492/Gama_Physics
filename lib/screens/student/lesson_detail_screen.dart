@@ -23,8 +23,8 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
 
     if (lesson == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Error')),
-        body: const Center(child: Text('Lesson not found')),
+        appBar: AppBar(title: Text(l10n.error)),
+        body: Center(child: Text(l10n.lessonNotFound)),
       );
     }
 

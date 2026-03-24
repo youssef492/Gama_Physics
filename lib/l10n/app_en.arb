@@ -207,5 +207,64 @@
   "videoNotAvailableDesc": "The video is currently unavailable. Please try again later.",
   "video_loading": "Loading video...",
   "video_error": "Error loading video",
-  "video_retry": "Retry"
+  "video_retry": "Retry",
+  "error": "Error",
+  "lessonNotFound": "Lesson not found",
+  "lessonViewers": "Lesson Viewers",
+  "failedToLoadData": "Failed to load data",
+  "noLessonViewers": "No one has watched this lesson yet",
+  "studentWatched": "student watched",
+  "totalViews": "Total Views",
+  "firstWatch": "First Watch",
+  "lastWatch": "Last Watch",
+  "preparingVideo": "Preparing video",
+  "slowNetwork": "Slow Network",
+  "slowNetworkDesc": "Connection is slow, please wait or try again",
+  "noInternet": "No Internet Connection",
+  "noInternetDesc": "Check your connection and try again",
+  "cannotPlayVideo": "Cannot play video",
+  "cannotPlayVideoDesc": "Please try again later",
+  "extractingLink": "Extracting link...",
+  "preparingPlayback": "Preparing for playback...",
+  "almostReady": "Almost ready...",
+  "exportExcel": "Export Excel",
+  "exportFailed": "Export failed: {error}",
+  "@exportFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "present": "Present",
+  "studentNotFound": "Student not found",
+  "searchAndAddStudent": "Search and add student",
+  "exportSuccess": "Export Successful!",
+  "fileSavedInDownloads": "File saved to Downloads\nOpen it from the Files app",
+  "ok": "OK",
+  "timesWatched": "{count}× watched",
+  "@timesWatched": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "qrCode": "QR Code",
+  "studentCodeLabel": "Student Code",
+  "generatingCode": "Generating code...",
+  "noCodeYet": "No code yet",
+  "view": "View",
+  "errorLoadingSessions": "Error loading sessions",
+  "noSessionsYet": "No sessions yet",
+  "youtube": "YouTube",
+  "googleDrive": "Google Drive",
+  "newLabel": "NEW",
+  "exportFailed": "Export failed: {error}",
+  "@exportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "exportPdf": "Export PDF",
+  "all": "All",
+  "fullScreen": "Full Screen"
 }

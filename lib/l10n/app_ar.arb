@@ -207,5 +207,62 @@
   "videoNotAvailableDesc": "الفيديو غير متاح حالياً. يرجى المحاولة مرة أخرى لاحقاً.",
   "video_loading": "جاري تحميل الفيديو...",
   "video_error": "حدث خطأ أثناء تحميل الفيديو",
-  "video_retry": "إعادة المحاولة"
+  "video_retry": "إعادة المحاولة",
+  "error": "خطأ",
+  "lessonNotFound": "الدرس غير موجود",
+  "lessonViewers": "مشاهدو الدرس",
+  "failedToLoadData": "حدث خطأ في تحميل البيانات",
+  "noLessonViewers": "لم يشاهد أحد هذا الدرس بعد",
+  "studentWatched": "طالب شاهد",
+  "totalViews": "إجمالي المشاهدات",
+  "firstWatch": "أول مشاهدة",
+  "lastWatch": "آخر مشاهدة",
+  "preparingVideo": "جاري تجهيز الفيديو",
+  "slowNetwork": "الشبكة بطيئة",
+  "slowNetworkDesc": "النت بطيء شوية، حاول تاني أو انتظر",
+  "noInternet": "لا يوجد اتصال بالإنترنت",
+  "noInternetDesc": "تحقق من الاتصال وحاول مرة أخرى",
+  "cannotPlayVideo": "تعذر تشغيل الفيديو",
+  "cannotPlayVideoDesc": "حاول مرة أخرى",
+  "extractingLink": "جاري استخراج الرابط...",
+  "preparingPlayback": "جاري التحضير للتشغيل...",
+  "almostReady": "تقريبًا جاهز...",
+  "exportExcel": "تصدير Excel",
+  "exportFailed": "فشل التصدير: {error}",
+  "@exportFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "present": "حاضر",
+  "studentNotFound": "طالب غير موجود",
+  "searchAndAddStudent": "ابحث عن طالب وأضفه",
+  "exportSuccess": "تم التصدير بنجاح!",
+  "fileSavedInDownloads": "الملف محفوظ في Downloads\nافتحه من تطبيق Files",
+  "ok": "حسناً",
+  "timesWatched": "{count}× شاهد",
+  "@timesWatched": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "qrCode": "كود QR",
+  "studentCodeLabel": "كود الطالب",
+  "generatingCode": "جاري إنشاء الكود...",
+  "noCodeYet": "لا يوجد كود بعد",
+  "view": "عرض",
+  "errorLoadingSessions": "خطأ في تحميل الحصص",
+  "noSessionsYet": "لا توجد حصص بعد",
+  "youtube": "YouTube",
+  "googleDrive": "Google Drive",
+  "newLabel": "جديد",
+  "exportFailed": "فشل التصدير: {error}",
+  "@exportFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "exportPdf": "تصدير PDF",
+  "all": "الكل",
+  "fullScreen": "عرض كامل"
 }

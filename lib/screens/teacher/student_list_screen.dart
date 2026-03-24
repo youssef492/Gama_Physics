@@ -76,8 +76,9 @@ class _StudentListScreenState extends State<StudentListScreen> {
       );
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
+          SnackBar(content: Text(l10n.exportFailed(e.toString()))),
         );
       }
     } finally {
@@ -114,8 +115,9 @@ class _StudentListScreenState extends State<StudentListScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: \$e')),
+          SnackBar(content: Text(l10n.exportFailed(e.toString()))),
         );
       }
     } finally {
@@ -148,7 +150,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 )
               : IconButton(
                   icon: const Icon(Icons.table_chart_outlined),
-                  tooltip: 'Export Excel',
+                  tooltip: l10n.exportExcel,
                   onPressed: () => _exportExcel(data),
                 ),
           // PDF export button
@@ -164,7 +166,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 )
               : IconButton(
                   icon: const Icon(Icons.picture_as_pdf_outlined),
-                  tooltip: 'Export PDF',
+                  tooltip: l10n.exportPdf,
                   onPressed: () => _exportPdf(data),
                 ),
         ],
@@ -215,8 +217,8 @@ class _StudentListScreenState extends State<StudentListScreen> {
                         size: 16, color: AppTheme.primaryBlue),
                     label: Text(
                       _selectedStage != null
-                          ? 'طباعة $_selectedStage'
-                          : 'طباعة الكل',
+                          ? '${l10n.exportPdf} $_selectedStage'
+                          : '${l10n.exportPdf} ${l10n.all}',
                       style: const TextStyle(
                           fontSize: 12, color: AppTheme.primaryBlue),
                     ),
@@ -682,6 +684,7 @@ class _StudentCardState extends State<_StudentCard> {
 
   // ─── QR Code section ──────────────────────────────────────────────────────
   Widget _buildQrSection(BuildContext context, AppUser student) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -722,8 +725,8 @@ class _StudentCardState extends State<_StudentCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'QR Code',
+                Text(
+                  l10n.qrCode,
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                 ),
                 const SizedBox(height: 4),
@@ -744,8 +747,8 @@ class _StudentCardState extends State<_StudentCard> {
                   onPressed: () => _showQrDialog(context, student),
                   icon: const Icon(Icons.fullscreen,
                       size: 16, color: AppTheme.primaryBlue),
-                  label: const Text(
-                    'عرض كامل',
+                  label: Text(
+                    l10n.fullScreen,
                     style: TextStyle(fontSize: 12, color: AppTheme.primaryBlue),
                   ),
                   style: TextButton.styleFrom(

@@ -77,8 +77,9 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
       }
     } catch (e) {
       if (context.mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e')),
+          SnackBar(content: Text(l10n.exportFailed(e.toString()))),
         );
       }
     } finally {
@@ -118,7 +119,7 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                   )
                 : IconButton(
                     icon: const Icon(Icons.file_download_outlined),
-                    tooltip: 'Export Excel',
+                    tooltip: l10n.exportExcel,
                     onPressed: () => _exportToExcel(context, data.codes),
                   ),
           ],

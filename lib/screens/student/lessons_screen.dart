@@ -133,10 +133,11 @@ class _LessonsScreenState extends State<LessonsScreen> {
                         );
                       }
                     } catch (e) {
-                      if (e.toString().contains('used_by_another_student') && context.mounted) {
+                      if (e.toString().contains('used_by_another_student') &&
+                          context.mounted) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('خطأ هذا الكود لطالب اخر')),
+                          SnackBar(content: Text(l10n.invalidCode)),
                         );
                       }
                     }

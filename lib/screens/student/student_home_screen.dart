@@ -46,7 +46,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Gama Physics'),
+        title: Text(l10n.appTitle),
         actions: [
           const LanguageToggle(),
           IconButton(
@@ -297,6 +297,7 @@ class _NewBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
@@ -304,7 +305,7 @@ class _NewBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
-        'NEW',
+        l10n.newLabel,
         style: const TextStyle(
           color: Colors.white,
           fontSize: 9,

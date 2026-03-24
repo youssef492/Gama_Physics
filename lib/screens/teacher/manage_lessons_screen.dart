@@ -155,19 +155,17 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
                 TextField(
                   controller: urlController,
                   textDirection: TextDirection.ltr,
-                  decoration: InputDecoration(
-                    labelText: l10n.videoUrl,
-                    hintText: 'YouTube or Google Drive URL',
-                  ),
+                  decoration: InputDecoration(labelText: l10n.videoUrl),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: videoType,
                   decoration: InputDecoration(labelText: l10n.videoType),
-                  items: const [
-                    DropdownMenuItem(value: 'youtube', child: Text('YouTube')),
+                  items: [
                     DropdownMenuItem(
-                        value: 'drive', child: Text('Google Drive')),
+                        value: 'youtube', child: Text(l10n.youtube)),
+                    DropdownMenuItem(
+                        value: 'drive', child: Text(l10n.googleDrive)),
                   ],
                   onChanged: (v) => setDialogState(() => videoType = v!),
                 ),

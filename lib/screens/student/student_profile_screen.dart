@@ -102,6 +102,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
   // ─── Show QR full screen dialog ───────────────────────────────────────────
   void _showQrDialog(BuildContext context, String uid, String code) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -117,11 +118,11 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   const Icon(Icons.qr_code_2,
                       color: AppTheme.primaryBlue, size: 28),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Text(
-                      'QR Code',
+                      l10n.qrCode,
                       style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                          const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                     ),
                   ),
                   IconButton(
@@ -188,7 +189,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'كود الطالب',
+                      l10n.studentCodeLabel,
                       style: TextStyle(
                         color: Colors.white.withAlpha(180),
                         fontSize: 12,
@@ -209,7 +210,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                     _showSnackBar('تم نسخ الكود ✓', success: true);
                   },
                   icon: const Icon(Icons.copy, size: 18),
-                  label: const Text('نسخ الكود'),
+                  label: Text(l10n.copy),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.primaryBlue,
                     side: const BorderSide(color: AppTheme.primaryBlue),
@@ -297,10 +298,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                         const Icon(Icons.qr_code_2,
                             color: AppTheme.primaryBlue),
                         const SizedBox(width: 10),
-                        const Expanded(
+                        Expanded(
                           child: Text(
-                            'QR Code',
-                            style: TextStyle(
+                            l10n.qrCode,
+                            style: const TextStyle(
                                 fontWeight: FontWeight.w600, fontSize: 16),
                           ),
                         ),
@@ -314,12 +315,12 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                     ),
                     const SizedBox(height: 16),
                     if (_isGeneratingCode)
-                      const Center(
+                       Center(
                         child: Padding(
                           padding: EdgeInsets.all(20),
                           child: Text(
-                            'جاري إنشاء الكود...',
-                            style: TextStyle(color: AppTheme.textMuted),
+                            l10n.generatingCode,
+                            style: const TextStyle(color: AppTheme.textMuted),
                           ),
                         ),
                       )
@@ -400,8 +401,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                             context, user.uid, studentCode),
                                         icon: const Icon(Icons.fullscreen,
                                             size: 16),
-                                        label: const Text('عرض',
-                                            style: TextStyle(fontSize: 12)),
+                                        label: Text(l10n.view,
+                                            style: const TextStyle(fontSize: 12)),
                                         style: OutlinedButton.styleFrom(
                                           foregroundColor: AppTheme.primaryBlue,
                                           side: const BorderSide(
@@ -421,8 +422,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                               success: true);
                                         },
                                         icon: const Icon(Icons.copy, size: 16),
-                                        label: const Text('نسخ',
-                                            style: TextStyle(fontSize: 12)),
+                                        label: Text(l10n.copy,
+                                            style: const TextStyle(fontSize: 12)),
                                         style: OutlinedButton.styleFrom(
                                           foregroundColor: AppTheme.accentCyan,
                                           side: const BorderSide(
@@ -448,9 +449,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                 size: 48,
                                 color: AppTheme.textMuted.withAlpha(100)),
                             const SizedBox(height: 8),
-                            const Text(
-                              'لا يوجد كود بعد',
-                              style: TextStyle(color: AppTheme.textMuted),
+                            Text(
+                              l10n.noCodeYet,
+                              style: const TextStyle(color: AppTheme.textMuted),
                             ),
                             const SizedBox(height: 12),
                             ElevatedButton.icon(
@@ -465,7 +466,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                                       }
                                     },
                               icon: const Icon(Icons.add, size: 18),
-                              label: const Text('إنشاء كود'),
+                              label: Text(l10n.generateCodes),
                               style: ElevatedButton.styleFrom(
                                   backgroundColor: AppTheme.primaryBlue),
                             ),

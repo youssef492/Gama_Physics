@@ -43,7 +43,8 @@ class YoutubeService {
         final video =
             await _yt.videos.get(id).timeout(const Duration(seconds: 30));
 
-        final muxedStreams = manifest.muxed.sortByVideoQuality();
+        final muxedStreams =
+            manifest.muxed.sortByVideoQuality().reversed.toList();
         if (muxedStreams.isEmpty) {
           throw Exception('No streams available');
         }

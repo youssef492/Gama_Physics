@@ -144,6 +144,7 @@ class _TakeAttendanceScreenState extends State<TakeAttendanceScreen> {
   }
 
   void _markPresent(AppUser student) {
+    final l10n = AppLocalizations.of(context)!;
     if (session.isEnded) return;
     final alreadyPresent =
         session.presentStudents.any((s) => s['uid'] == student.uid);
@@ -165,7 +166,7 @@ class _TakeAttendanceScreenState extends State<TakeAttendanceScreen> {
             children: [
               const Icon(Icons.check_circle, color: Colors.white, size: 18),
               const SizedBox(width: 8),
-              Text('${student.name} - حضر ✓'),
+              Text('${student.name} - ${l10n.present} ✓'),
             ],
           ),
           backgroundColor: AppTheme.successGreen,
@@ -192,6 +193,7 @@ class _TakeAttendanceScreenState extends State<TakeAttendanceScreen> {
   }
 
   void _handleScannedCode(String code) {
+    final l10n = AppLocalizations.of(context)!;
     final data = context.read<DataProvider>();
     final student = data.students.firstWhere(
       (s) => s.uid == code || s.phone == code || s.studentCode == code,
@@ -202,7 +204,7 @@ class _TakeAttendanceScreenState extends State<TakeAttendanceScreen> {
       _markPresent(student);
     } else {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('طالب غير موجود')));
+          .showSnackBar(SnackBar(content: Text(l10n.studentNotFound)));
     }
   }
 
@@ -694,6 +696,7 @@ class _SearchResultTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -763,15 +766,15 @@ class _SearchResultTile extends StatelessWidget {
                   color: AppTheme.successGreen.withAlpha(20),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.check_circle,
                         color: AppTheme.successGreen, size: 14),
                     SizedBox(width: 4),
                     Text(
-                      'حاضر',
-                      style: TextStyle(
+                      l10n.present,
+                      style: const TextStyle(
                         color: AppTheme.successGreen,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -788,9 +791,9 @@ class _SearchResultTile extends StatelessWidget {
                   color: AppTheme.primaryBlue,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'إضافة',
-                  style: TextStyle(
+                child: Text(
+                  l10n.add,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

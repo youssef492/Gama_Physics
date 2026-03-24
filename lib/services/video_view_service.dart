@@ -26,34 +26,29 @@ class VideoViewService {
           _db.collection(_collection).doc(_docId(lessonId, studentId));
       final now = Timestamp.fromDate(DateTime.now());
 
-      // ✅ نستخدم transaction عشان نتأكد من firstWatchedAt
-      await _db.runTransaction((transaction) async {
-        final snapshot = await transaction.get(docRef);
-
-        if (snapshot.exists) {
-          // Document موجود → نحدّث watchCount و lastWatchedAt بس
-          transaction.update(docRef, {
-            'lastWatchedAt': now,
-            'watchCount': FieldValue.increment(1),
-            // نحدّث البيانات الشخصية (لو اتغيرت)
-            'studentName': studentName,
-            'studentPhone': studentPhone,
-            'studentGrade': studentGrade,
-          });
-        } else {
-          // Document جديد → نضيف firstWatchedAt كمان
-          transaction.set(docRef, {
-            'lessonId': lessonId,
-            'studentId': studentId,
-            'studentName': studentName,
-            'studentPhone': studentPhone,
-            'studentGrade': studentGrade,
-            'firstWatchedAt': now,
-            'lastWatchedAt': now,
-            'watchCount': 1,
-          });
-        }
-      });
+      // ✅ نستخدم update وبعدها set لو مفيش دوكيومنت (عشان نتجنب مشكلة الـ get في الـ Rules لدوكيومنت مش موجود)
+      try {
+        await docRef.update({
+          'lastWatchedAt': now,
+          'watchCount': FieldValue.increment(1),
+          // نحدّث البيانات الشخصية (لو اتغيرت)
+          'studentName': studentName,
+          'studentPhone': studentPhone,
+          'studentGrade': studentGrade,
+        });
+      } catch (e) {
+        // لو الـ Document مش موجود، الـ update هيعمل throw، هنا هنعمل set بدل ما نقرأ الأول
+        await docRef.set({
+          'lessonId': lessonId,
+          'studentId': studentId,
+          'studentName': studentName,
+          'studentPhone': studentPhone,
+          'studentGrade': studentGrade,
+          'firstWatchedAt': now,
+          'lastWatchedAt': now,
+          'watchCount': 1,
+        });
+      }
     } catch (e) {
       debugPrint('[VideoViewService] recordView error: $e');
     }
@@ -91,22 +86,16 @@ class VideoViewService {
           .collection(_collection)
           .where('lessonId', isEqualTo: lessonId)
           .get();
-      int total = 0;
-      for (var doc in snap.docs) {
-        total += (doc.data()['watchCount'] as num?)?.toInt() ?? 0;
-      }
-      return total;
+      return snap.docs.length;
     } catch (e) {
       debugPrint('[VideoViewService] getTotalViewsCount error: $e');
       return 0;
     }
   }
 
-  /// Stream لعدد المشاهدات لمجموعة دروس مرة واحدة (real-time)
   static Stream<Map<String, int>> getViewCountsStream(List<String> lessonIds) {
     if (lessonIds.isEmpty) return Stream.value({});
 
-    // Firestore whereIn محدود بـ 10 — خلي الكود يقسم لو عدى
     final chunks = <List<String>>[];
     for (var i = 0; i < lessonIds.length; i += 10) {
       chunks.add(lessonIds.sublist(i, (i + 10).clamp(0, lessonIds.length)));
@@ -121,8 +110,7 @@ class VideoViewService {
         final counts = <String, int>{for (final id in lessonIds) id: 0};
         for (final doc in snap.docs) {
           final lid = doc.data()['lessonId'] as String;
-          counts[lid] = (counts[lid] ?? 0) +
-              ((doc.data()['watchCount'] as num?)?.toInt() ?? 0);
+          counts[lid] = (counts[lid] ?? 0) + 1;
         }
         return counts;
       });
@@ -138,8 +126,7 @@ class VideoViewService {
             final counts = <String, int>{};
             for (final doc in snap.docs) {
               final lid = doc.data()['lessonId'] as String;
-              counts[lid] = (counts[lid] ?? 0) +
-                  ((doc.data()['watchCount'] as num?)?.toInt() ?? 0);
+              counts[lid] = (counts[lid] ?? 0) + 1;
             }
             return counts;
           })),

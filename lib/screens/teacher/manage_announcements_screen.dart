@@ -145,8 +145,9 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toString();
     final data = context.watch<DataProvider>();
-    final DateFormat formatter = DateFormat('yyyy/MM/dd hh:mm a');
+    final DateFormat formatter = DateFormat('d MMM yyyy  hh:mm a', locale);
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.announcements),

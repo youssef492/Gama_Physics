@@ -108,11 +108,11 @@ class _AttendanceSessionsScreenState extends State<AttendanceSessionsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return const Center(child: Text('Error loading sessions'));
+            return Center(child: Text(l10n.errorLoadingSessions));
           }
           final sessions = snapshot.data ?? [];
           if (sessions.isEmpty) {
-            return const Center(child: Text('No sessions yet.'));
+            return Center(child: Text(l10n.noSessionsYet));
           }
 
           return ListView.builder(

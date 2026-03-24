@@ -583,4 +583,132 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get video_retry => 'Retry';
+
+  @override
+  String get error => 'Error';
+
+  @override
+  String get lessonNotFound => 'Lesson not found';
+
+  @override
+  String get lessonViewers => 'Lesson Viewers';
+
+  @override
+  String get failedToLoadData => 'Failed to load data';
+
+  @override
+  String get noLessonViewers => 'No one has watched this lesson yet';
+
+  @override
+  String get studentWatched => 'student watched';
+
+  @override
+  String get totalViews => 'Total Views';
+
+  @override
+  String get firstWatch => 'First Watch';
+
+  @override
+  String get lastWatch => 'Last Watch';
+
+  @override
+  String get preparingVideo => 'Preparing video';
+
+  @override
+  String get slowNetwork => 'Slow Network';
+
+  @override
+  String get slowNetworkDesc => 'Connection is slow, please wait or try again';
+
+  @override
+  String get noInternet => 'No Internet Connection';
+
+  @override
+  String get noInternetDesc => 'Check your connection and try again';
+
+  @override
+  String get cannotPlayVideo => 'Cannot play video';
+
+  @override
+  String get cannotPlayVideoDesc => 'Please try again later';
+
+  @override
+  String get extractingLink => 'Extracting link...';
+
+  @override
+  String get preparingPlayback => 'Preparing for playback...';
+
+  @override
+  String get almostReady => 'Almost ready...';
+
+  @override
+  String get exportExcel => 'Export Excel';
+
+  @override
+  String exportFailed(String error) {
+    return 'Export failed: $error';
+  }
+
+  @override
+  String get present => 'Present';
+
+  @override
+  String get studentNotFound => 'Student not found';
+
+  @override
+  String get searchAndAddStudent => 'Search and add student';
+
+  @override
+  String get exportSuccess => 'Export Successful!';
+
+  @override
+  String get fileSavedInDownloads =>
+      'File saved to Downloads\nOpen it from the Files app';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String timesWatched(int count) {
+    return '$count× watched';
+  }
+
+  @override
+  String get qrCode => 'QR Code';
+
+  @override
+  String get studentCodeLabel => 'Student Code';
+
+  @override
+  String get generatingCode => 'Generating code...';
+
+  @override
+  String get noCodeYet => 'No code yet';
+
+  @override
+  String get view => 'View';
+
+  @override
+  String get errorLoadingSessions => 'Error loading sessions';
+
+  @override
+  String get noSessionsYet => 'No sessions yet';
+
+  @override
+  String get youtube => 'YouTube';
+
+  @override
+  String get googleDrive => 'Google Drive';
+
+  @override
+  String get newLabel => 'NEW';
+
+  @override
+  String get exportPdf => 'Export PDF';
+
+  @override
+  String get all => 'All';
+
+  @override
+  String get fullScreen => 'Full Screen';
 }

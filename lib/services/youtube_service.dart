@@ -5,108 +5,139 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 class YoutubeService {
   static final YoutubeExplode _yt = YoutubeExplode();
 
-  // ─── Cache: videoId → result (عمرها 3 ساعات) ──────────────────────────────
   static final Map<String, _CachedStream> _cache = {};
-  static const int _maxCacheSize = 50; // ✅ حد أقصى للعناصر
+  static const int _maxCacheSize = 50;
 
-  /// ✅ تحسين: timeout أطول + retry mechanism
   static Future<YoutubeStreamResult> getStreamUrl(
     String rawUrl, {
     int retryCount = 2,
+    bool forceRefresh = false,
   }) async {
     final videoId = extractVideoId(rawUrl);
-
-    // تنظيف الـ cache القديمة
     _cleanupCache();
 
-    // لو موجودة في الـ cache وغير منتهية → ارجعها على طول
     final cached = _cache[videoId];
-    if (cached != null && !cached.isExpired) {
-      debugPrint('[YoutubeService] Cache hit for: $videoId');
+    if (!forceRefresh && cached != null && !cached.isExpired) {
+      debugPrint('[YoutubeService] Cache hit: $videoId');
       return cached.result;
     }
 
-    // ✅ محاولة مع retry
     for (int attempt = 0; attempt <= retryCount; attempt++) {
       try {
         debugPrint(
-            '[YoutubeService] Fetching stream (attempt ${attempt + 1}/$retryCount): $videoId');
+            '[YoutubeService] Fetching (attempt ${attempt + 1}): $videoId');
 
         final id = VideoId(rawUrl);
 
-        // ✅ timeout أطول (45 ثانية للـ manifest)
         final manifest = await _yt.videos.streamsClient
             .getManifest(id)
             .timeout(const Duration(seconds: 45));
 
-        // ✅ timeout أطول للـ video info (30 ثانية)
         final video =
             await _yt.videos.get(id).timeout(const Duration(seconds: 30));
 
-        final muxedStreams =
-            manifest.muxed.sortByVideoQuality().reversed.toList();
-        if (muxedStreams.isEmpty) {
-          throw Exception('No streams available');
+        // ─── Best audio stream ─────────────────────────────────────────────
+        final audioStreams = manifest.audioOnly.sortByBitrate().toList();
+        final bestAudio = audioStreams.isNotEmpty ? audioStreams.last : null;
+        final audioUrl = bestAudio?.url.toString();
+
+        // ─── HLS streams ───────────────────────────────────────────────────
+        // HlsStreamInfo.toString() →  "[HLS] Video-only (230 | 640x360p25 | m3u8)"
+        // نعمل filter للـ video-only وbparse الـ height من الـ string
+        final hlsAll = manifest.hls.toList();
+        debugPrint('[YoutubeService] All HLS: $hlsAll');
+
+        final uniqueQualities = <String, YoutubeQualityOption>{};
+
+        for (final s in hlsAll) {
+          final str = s.toString();
+
+          // تخطى الـ audio-only streams
+          if (str.contains('Audio-only')) continue;
+
+          // ✅ استخرج الـ height من pattern زي "640x360p25" أو "1280x720p30"
+          final match = RegExp(r'\d+x(\d+)p').firstMatch(str);
+          if (match == null) continue;
+
+          final height = match.group(1)!;
+          final label = '${height}p';
+
+          if (!uniqueQualities.containsKey(label)) {
+            uniqueQualities[label] = YoutubeQualityOption(
+              label: label,
+              url: s.url.toString(),
+              audioUrl: audioUrl,
+            );
+            debugPrint('[YoutubeService] Found HLS quality: $label');
+          }
+        }
+
+        List<YoutubeQualityOption> allStreamsList = [];
+        String bestUrl;
+
+        if (uniqueQualities.isNotEmpty) {
+          // رتب تنازلياً (الأعلى جودة أول)
+          allStreamsList = uniqueQualities.values.toList()
+            ..sort((a, b) {
+              final aH = int.tryParse(a.label.replaceAll('p', '')) ?? 0;
+              final bH = int.tryParse(b.label.replaceAll('p', '')) ?? 0;
+              return bH.compareTo(aH);
+            });
+
+          bestUrl = allStreamsList.first.url;
+          debugPrint(
+              '[YoutubeService] HLS qualities: ${allStreamsList.map((q) => q.label).toList()}');
+        } else {
+          // ─── Muxed fallback (360p) ─────────────────────────────────────
+          debugPrint('[YoutubeService] No HLS video → muxed fallback');
+          final muxedStreams =
+              manifest.muxed.sortByVideoQuality().reversed.toList();
+
+          if (muxedStreams.isEmpty) throw Exception('No streams available');
+
+          for (var s in muxedStreams) {
+            final label = '${s.videoResolution.height}p';
+            if (!uniqueQualities.containsKey(label)) {
+              uniqueQualities[label] =
+                  YoutubeQualityOption(label: label, url: s.url.toString());
+            }
+          }
+          allStreamsList = uniqueQualities.values.toList();
+          bestUrl = muxedStreams.first.url.toString();
         }
 
         final result = YoutubeStreamResult(
-          streamUrl: muxedStreams.first.url.toString(),
+          streamUrl: bestUrl,
           title: video.title,
           duration: video.duration ?? Duration.zero,
-          availableQualities: muxedStreams
-              .map((s) =>
-                  s.videoQuality.toString().replaceAll('videoQuality', ''))
-              .toList(),
-          allStreams: muxedStreams
-              .map((s) => YoutubeQualityOption(
-                    label: '${s.videoResolution.height}p',
-                    url: s.url.toString(),
-                  ))
-              .toList(),
+          availableQualities: allStreamsList.map((q) => q.label).toList(),
+          allStreams: allStreamsList,
         );
 
-        // نحفظها في الـ cache
         _cache[videoId] =
             _CachedStream(result: result, cachedAt: DateTime.now());
-        debugPrint('[YoutubeService] Successfully cached: $videoId');
+        debugPrint(
+            '[YoutubeService] Done. Qualities: ${result.availableQualities}');
         return result;
       } on TimeoutException catch (e) {
-        debugPrint('[YoutubeService] Timeout on attempt ${attempt + 1}: $e');
-
-        // لو آخر محاولة → نشوف الـ cache القديمة
+        debugPrint('[YoutubeService] Timeout attempt ${attempt + 1}: $e');
         if (attempt == retryCount) {
-          if (cached != null) {
-            debugPrint('[YoutubeService] Using expired cache for: $videoId');
-            return cached.result;
-          }
+          if (cached != null) return cached.result;
           throw Exception('slow_connection');
         }
-
-        // ✅ انتظر شوية قبل إعادة المحاولة
         await Future.delayed(Duration(seconds: 2 * (attempt + 1)));
       } catch (e) {
-        debugPrint('[YoutubeService] Error on attempt ${attempt + 1}: $e');
-
-        // لو آخر محاولة
+        debugPrint('[YoutubeService] Error attempt ${attempt + 1}: $e');
         if (attempt == retryCount) {
-          // لو في الـ cache حتى لو منتهية → أحسن من لا شيء
-          if (cached != null) {
-            debugPrint(
-                '[YoutubeService] Using expired cache as fallback: $videoId');
-            return cached.result;
-          }
+          if (cached != null) return cached.result;
           rethrow;
         }
-
-        // انتظر قبل إعادة المحاولة
         await Future.delayed(Duration(seconds: 2 * (attempt + 1)));
       }
     }
-
     throw Exception('Max retries exceeded');
   }
 
-  // ✅ استخرج الـ videoId من الـ URL عشان نستخدمه كـ cache key
   static String extractVideoId(String rawUrl) {
     try {
       final uri = Uri.tryParse(rawUrl);
@@ -120,37 +151,23 @@ class YoutubeService {
     }
   }
 
-  // ✅ تنظيف الـ cache من العناصر القديمة
   static void _cleanupCache() {
     if (_cache.length < _maxCacheSize) return;
-
-    // احذف العناصر المنتهية
-    final expired =
-        _cache.entries.where((e) => e.value.isExpired).map((e) => e.key);
-
-    for (var key in expired) {
-      _cache.remove(key);
-      debugPrint('[YoutubeService] Removed expired cache: $key');
-    }
-
-    // لو لسه الـ cache كبير، احذف الأقدم
+    final expired = _cache.entries
+        .where((e) => e.value.isExpired)
+        .map((e) => e.key)
+        .toList();
+    for (var key in expired) _cache.remove(key);
     if (_cache.length >= _maxCacheSize) {
       final sorted = _cache.entries.toList()
         ..sort((a, b) => a.value.cachedAt.compareTo(b.value.cachedAt));
-
-      final toRemove = sorted.take(_cache.length - _maxCacheSize + 10);
-      for (var entry in toRemove) {
+      for (var entry in sorted.take(_cache.length - _maxCacheSize + 10)) {
         _cache.remove(entry.key);
-        debugPrint('[YoutubeService] Removed old cache: ${entry.key}');
       }
     }
   }
 
-  static void clearCache() {
-    _cache.clear();
-    debugPrint('[YoutubeService] Cache cleared');
-  }
-
+  static void clearCache() => _cache.clear();
   static void dispose() => _yt.close();
 }
 
@@ -159,9 +176,7 @@ class _CachedStream {
   final YoutubeStreamResult result;
   final DateTime cachedAt;
   static const Duration _ttl = Duration(hours: 3);
-
   _CachedStream({required this.result, required this.cachedAt});
-
   bool get isExpired => DateTime.now().difference(cachedAt) > _ttl;
 }
 
@@ -185,5 +200,11 @@ class YoutubeStreamResult {
 class YoutubeQualityOption {
   final String label;
   final String url;
-  YoutubeQualityOption({required this.label, required this.url});
+  final String? audioUrl;
+
+  YoutubeQualityOption({
+    required this.label,
+    required this.url,
+    this.audioUrl,
+  });
 }

@@ -226,6 +226,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       final result = await YoutubeService.getStreamUrl(
         widget.rawVideoUrl,
         retryCount: 1,
+        forceRefresh: true,
       );
 
       final chosen =
@@ -242,6 +243,9 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     } catch (_) {
       // fallback: جرب الـ URL القديم
       await _player.open(Media(option.url), play: false);
+      if (option.audioUrl != null) {
+        await _player.setAudioTrack(AudioTrack.uri(option.audioUrl!));
+      }
       await _player.seek(pos);
       if (wasPlaying) await _player.play();
       if (mounted) setState(() => _loadState = _VideoLoadState.ready);
@@ -344,14 +348,14 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                   ignoring: !_showControls,
                   child: StreamBuilder<bool>(
                     stream: _player.stream.playing,
-                    initialData: false,
+                    initialData: _player.state.playing,
                     builder: (_, playSnap) {
-                      final isPlaying = playSnap.data ?? false;
+                      final isPlaying = playSnap.data ?? _player.state.playing;
                       return StreamBuilder<Duration>(
                         stream: _player.stream.position,
-                        initialData: Duration.zero,
+                        initialData: _player.state.position,
                         builder: (_, posSnap) {
-                          final pos = posSnap.data ?? Duration.zero;
+                          final pos = posSnap.data ?? _player.state.position;
                           final dur = _player.state.duration;
                           final progress = dur.inMilliseconds > 0
                               ? (pos.inMilliseconds / dur.inMilliseconds)

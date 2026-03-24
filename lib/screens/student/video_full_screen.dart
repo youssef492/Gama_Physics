@@ -226,6 +226,7 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
       final result = await YoutubeService.getStreamUrl(
         widget.videoId!,
         retryCount: 1,
+        forceRefresh: true,
       );
 
       final chosen =
@@ -241,6 +242,9 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
       if (mounted) setState(() => _isLoading = false);
     } catch (_) {
       await _player.open(Media(option.url), play: false);
+      if (option.audioUrl != null) {
+        await _player.setAudioTrack(AudioTrack.uri(option.audioUrl!));
+      }
       await _player.seek(pos);
       if (wasPlaying) await _player.play();
       await _player.setRate(_speed);
@@ -370,14 +374,14 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
                 ignoring: !_showControls,
                 child: StreamBuilder<bool>(
                   stream: _player.stream.playing,
-                  initialData: false,
+                  initialData: _player.state.playing,
                   builder: (context, playSnap) {
-                    final isPlaying = playSnap.data ?? false;
+                    final isPlaying = playSnap.data ?? _player.state.playing;
                     return StreamBuilder<Duration>(
                       stream: _player.stream.position,
-                      initialData: Duration.zero,
+                      initialData: _player.state.position,
                       builder: (context, posSnap) {
-                        final pos = posSnap.data ?? Duration.zero;
+                        final pos = posSnap.data ?? _player.state.position;
                         final dur = _player.state.duration;
                         final progress = dur.inMilliseconds > 0
                             ? (pos.inMilliseconds / dur.inMilliseconds)

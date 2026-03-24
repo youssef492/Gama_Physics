@@ -20,7 +20,9 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final lesson = ModalRoute.of(context)?.settings.arguments as Lesson?;
-
+    debugPrint('videoUrl: ${lesson?.videoUrl}');
+    debugPrint('videoType: ${lesson?.videoType}');
+    debugPrint('══════════════════════════════');
     if (lesson == null) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.error)),

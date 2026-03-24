@@ -4,6 +4,7 @@ import 'package:gama/l10n/app_localizations.dart';
 import 'package:gama/services/video_view_service.dart';
 import 'package:gama/services/youtube_service.dart';
 import 'package:gama/screens/student/video_full_screen.dart';
+import 'package:gama/services/google_drive_service.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
@@ -26,10 +27,9 @@ const _kPrimary = Color(0xFF0D6EBE);
 class VideoPlayerWidget extends StatefulWidget {
   final String embedUrl;
   final String title;
-  final String videoType;
+  final String videoType; // 'youtube' | 'google_drive' | غيره
   final String rawVideoUrl;
 
-  // بيانات المشاهدة — اختيارية (مش موجودة في شاشة المدرس)
   final String lessonId;
   final String studentId;
   final String studentName;
@@ -77,7 +77,6 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     _controller = VideoController(_player);
     _loadVideo();
 
-    // ✅ سجّل لما الفيديو يبدأ يشتغل فعلاً (مرة واحدة بس)
     _player.stream.playing.listen((isPlaying) {
       if (isPlaying) _recordViewOnce();
     });
@@ -91,6 +90,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     super.dispose();
   }
 
+  // ─── Load ─────────────────────────────────────────────────────────────────
+
   Future<void> _loadVideo() async {
     if (!mounted) return;
     setState(() => _loadState = _VideoLoadState.fetchingUrl);
@@ -100,7 +101,9 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
     try {
       String url;
+
       if (widget.videoType == 'youtube') {
+        // ─── YouTube ───────────────────────────────────────────────────────
         final result = await YoutubeService.getStreamUrl(
           widget.rawVideoUrl,
           retryCount: 2,
@@ -110,19 +113,28 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           _selectedQualityLabel = _qualityOptions.first.label;
         }
         url = result.streamUrl;
+        await _openMedia(url,
+            audioUrl: result.allStreams.firstOrNull?.audioUrl);
+      } else if (widget.videoType == 'google_drive' ||
+          widget.videoType == 'drive') {
+        // ─── Google Drive ──────────────────────────────────────────────────
+        url = await GoogleDriveService.getDirectStreamUrl(widget.embedUrl);
+        await _openMedia(url);
       } else {
+        // ─── غيره (direct URL) ────────────────────────────────────────────
         url = widget.embedUrl;
+        await _openMedia(url);
       }
 
       if (!mounted) return;
       setState(() => _loadState = _VideoLoadState.buffering);
-      await _player.open(Media(url), play: false);
 
       _player.stream.buffering.listen((b) {
         if (!b && mounted && _loadState == _VideoLoadState.buffering) {
           setState(() => _loadState = _VideoLoadState.ready);
         }
       });
+
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted && _loadState == _VideoLoadState.buffering) {
           setState(() => _loadState = _VideoLoadState.ready);
@@ -145,14 +157,22 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     }
   }
 
+  /// ✅ فتح الميديا مع audio منفصل لو موجود (HLS video-only)
+  Future<void> _openMedia(String videoUrl, {String? audioUrl}) async {
+    await _player.open(Media(videoUrl), play: false);
+    if (audioUrl != null && audioUrl.isNotEmpty) {
+      try {
+        await _player.setAudioTrack(AudioTrack.uri(audioUrl));
+      } catch (e) {
+        debugPrint('[VideoPlayer] Could not set audio track: $e');
+      }
+    }
+  }
+
   void _recordViewOnce() {
     if (_viewRecorded) return;
-    if (widget.lessonId.isEmpty) return; // مش student
-    if (widget.studentId.isEmpty) return;
-
+    if (widget.lessonId.isEmpty || widget.studentId.isEmpty) return;
     _viewRecorded = true;
-    debugPrint(
-        '[VideoPlayer] Recording view: lesson=${widget.lessonId}, student=${widget.studentId}');
     VideoViewService.recordView(
       lessonId: widget.lessonId,
       studentId: widget.studentId,
@@ -177,11 +197,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   void _keepVisible() => _hideTimer?.cancel();
 
   void _togglePlayPause() {
-    if (_player.state.playing) {
-      _player.pause();
-    } else {
-      _player.play();
-    }
+    _player.state.playing ? _player.pause() : _player.play();
     _resetTimer();
   }
 
@@ -222,7 +238,6 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     final wasPlaying = _player.state.playing;
 
     try {
-      // ✅ جيب URLs فريشة عشان محتمل تكون expired
       final result = await YoutubeService.getStreamUrl(
         widget.rawVideoUrl,
         retryCount: 1,
@@ -232,20 +247,16 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       final chosen =
           result.allStreams.where((q) => q.label == option.label).firstOrNull;
       final url = chosen?.url ?? option.url;
+      final audioUrl = chosen?.audioUrl ?? option.audioUrl;
 
-      // ✅ حدّث الـ quality options بالـ URLs الجديدة
       setState(() => _qualityOptions = result.allStreams);
 
-      await _player.open(Media(url), play: false);
+      await _openMedia(url, audioUrl: audioUrl);
       await _player.seek(pos);
       if (wasPlaying) await _player.play();
       if (mounted) setState(() => _loadState = _VideoLoadState.ready);
     } catch (_) {
-      // fallback: جرب الـ URL القديم
-      await _player.open(Media(option.url), play: false);
-      if (option.audioUrl != null) {
-        await _player.setAudioTrack(AudioTrack.uri(option.audioUrl!));
-      }
+      await _openMedia(option.url, audioUrl: option.audioUrl);
       await _player.seek(pos);
       if (wasPlaying) await _player.play();
       if (mounted) setState(() => _loadState = _VideoLoadState.ready);
@@ -256,7 +267,6 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   Future<void> _openFullScreen() async {
     final pos = _player.state.position;
-
     setState(() => _showControls = false);
     _hideTimer?.cancel();
 
@@ -390,10 +400,12 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                                   currentSec: pos.inSeconds,
                                   totalSec: dur.inSeconds,
                                   speed: _playbackSpeed,
+                                  // ✅ Google Drive مفيهاش quality picker
                                   qualityLabel: _selectedQualityLabel,
                                   onFullScreen: _openFullScreen,
                                   onSpeedTap: _showSpeedPicker,
-                                  onQualityTap: _qualityOptions.isNotEmpty
+                                  onQualityTap: widget.videoType == 'youtube' &&
+                                          _qualityOptions.isNotEmpty
                                       ? _showQualityPicker
                                       : null,
                                   onSliderChanged: (v) {
@@ -422,13 +434,10 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   Widget _buildOverlay() {
     final l10n = AppLocalizations.of(context)!;
-
     switch (_loadState) {
       case _VideoLoadState.fetchingUrl:
         return _LoadingOverlay(
-          key: const ValueKey('fetch'),
-          message: l10n.preparingVideo,
-        );
+            key: const ValueKey('fetch'), message: l10n.preparingVideo);
       case _VideoLoadState.buffering:
         return _LoadingOverlay(
           key: const ValueKey('buffer'),
@@ -550,16 +559,13 @@ class _ControlsBar extends StatelessWidget {
   }
 }
 
-// ─── Loading Overlay (المعدل الرئيسي) ─────────────────────────────────────────
+// ─── Loading Overlay ──────────────────────────────────────────────────────────
 class _LoadingOverlay extends StatefulWidget {
   final String message;
   final Stream<double>? progressStream;
 
-  const _LoadingOverlay({
-    super.key,
-    required this.message,
-    this.progressStream,
-  });
+  const _LoadingOverlay(
+      {super.key, required this.message, this.progressStream});
 
   @override
   State<_LoadingOverlay> createState() => _LoadingOverlayState();
@@ -573,18 +579,10 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
   @override
   void initState() {
     super.initState();
-    _fakeController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8), // → ~92% في 8 ثواني
-    );
-
+    _fakeController =
+        AnimationController(vsync: this, duration: const Duration(seconds: 8));
     _fakeProgress = Tween<double>(begin: 0.0, end: 0.92).animate(
-      CurvedAnimation(
-        parent: _fakeController,
-        curve: Curves.easeOutCubic,
-      ),
-    );
-
+        CurvedAnimation(parent: _fakeController, curve: Curves.easeOutCubic));
     _fakeController.forward();
   }
 
@@ -597,9 +595,7 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-
     if (widget.progressStream != null) {
-      // Buffering → real progress
       return StreamBuilder<double>(
         stream: widget.progressStream,
         initialData: 0.0,
@@ -607,8 +603,6 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
             _buildContent(snap.data ?? 0.0, isReal: true, l10n: l10n),
       );
     }
-
-    // Fetching URL → fake animated progress
     return AnimatedBuilder(
       animation: _fakeProgress,
       builder: (_, __) =>
@@ -619,41 +613,33 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
   Widget _buildContent(double value,
       {required bool isReal, required AppLocalizations l10n}) {
     final pct = (value * 100).toInt();
-    final percentStr = ' $pct%';
-
     return Container(
       color: Colors.black87,
       alignment: Alignment.center,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '${widget.message}$percentStr',
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: 240,
-            child: LinearProgressIndicator(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text('${widget.message} $pct%',
+            style: const TextStyle(color: Colors.white, fontSize: 14)),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: 240,
+          child: LinearProgressIndicator(
               value: value,
               valueColor: const AlwaysStoppedAnimation<Color>(_kPrimary),
               backgroundColor: Colors.white24,
-              minHeight: 4,
-            ),
+              minHeight: 4),
+        ),
+        if (!isReal) ...[
+          const SizedBox(height: 12),
+          Text(
+            pct < 35
+                ? l10n.extractingLink
+                : pct < 65
+                    ? l10n.preparingPlayback
+                    : l10n.almostReady,
+            style: const TextStyle(color: Colors.white54, fontSize: 12),
           ),
-          if (!isReal) ...[
-            const SizedBox(height: 12),
-            Text(
-              pct < 35
-                  ? l10n.extractingLink
-                  : pct < 65
-                      ? l10n.preparingPlayback
-                      : l10n.almostReady,
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-          ],
         ],
-      ),
+      ]),
     );
   }
 }
@@ -663,49 +649,42 @@ class _ErrorOverlay extends StatelessWidget {
   final IconData icon;
   final String title, subtitle;
   final VoidCallback onRetry;
-  const _ErrorOverlay({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onRetry,
-  });
+  const _ErrorOverlay(
+      {super.key,
+      required this.icon,
+      required this.title,
+      required this.subtitle,
+      required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-
     return Container(
       color: Colors.black87,
       padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: Colors.white60, size: 56),
-          const SizedBox(height: 16),
-          Text(title,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600),
-              textAlign: TextAlign.center),
-          const SizedBox(height: 8),
-          Text(subtitle,
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
-              textAlign: TextAlign.center),
-          const SizedBox(height: 20),
-          ElevatedButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh_rounded),
-            label: Text(l10n.retry),
-            style: ElevatedButton.styleFrom(
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(icon, color: Colors.white60, size: 56),
+        const SizedBox(height: 16),
+        Text(title,
+            style: const TextStyle(
+                color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+            textAlign: TextAlign.center),
+        const SizedBox(height: 8),
+        Text(subtitle,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+            textAlign: TextAlign.center),
+        const SizedBox(height: 20),
+        ElevatedButton.icon(
+          onPressed: onRetry,
+          icon: const Icon(Icons.refresh_rounded),
+          label: Text(l10n.retry),
+          style: ElevatedButton.styleFrom(
               backgroundColor: _kPrimary,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-          ),
-        ],
-      ),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
+        ),
+      ]),
     );
   }
 }

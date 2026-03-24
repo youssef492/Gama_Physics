@@ -119,6 +119,14 @@ class DataProvider with ChangeNotifier {
     }
   }
 
+  Future<void> updateAnnouncement(String id, String title, String content) async {
+    try {
+      await _firestoreService.updateAnnouncement(id, title, content);
+    } catch (e) {
+      _handleError(e);
+    }
+  }
+
   Future<void> deleteAnnouncement(String id) async {
     try {
       await _firestoreService.deleteAnnouncement(id);

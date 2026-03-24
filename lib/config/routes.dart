@@ -23,6 +23,7 @@ import '../screens/teacher/attendance_sessions_screen.dart';
 import '../screens/teacher/take_attendance_screen.dart';
 import '../screens/teacher/manage_announcements_screen.dart';
 import '../screens/teacher/lesson_viewers_screen.dart';
+import '../screens/teacher/announcement_viewers_screen.dart';
 
 class AppRoutes {
   static Map<String, WidgetBuilder> get routes => {
@@ -51,6 +52,7 @@ class AppRoutes {
         '/take-attendance': (context) => const TakeAttendanceScreen(),
         '/teacher-announcements': (context) =>
             const ManageAnnouncementsScreen(),
-        '/lesson-viewers': (context) => const LessonViewersScreen(), // ← جديد
+        '/lesson-viewers': (context) => const LessonViewersScreen(),
+        '/announcement-viewers': (context) => const AnnouncementViewersScreen(),
       };
 }

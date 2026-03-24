@@ -198,7 +198,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get announcementAdded => 'تم إضافة الإعلان بنجاح';
 
   @override
+  String get announcementUpdated => 'تم تحديث الإعلان بنجاح';
+
+  @override
   String get announcementDeleted => 'تم حذف الإعلان بنجاح';
+
+  @override
+  String get editAnnouncement => 'تعديل الإعلان';
+
+  @override
+  String get announcementViewers => 'مشاهدو الإعلان';
+
+  @override
+  String get noAnnouncementViewers => 'لا توجد مشاهدات حتى الآن';
 
   @override
   String get deleteStudentConfirm => 'هل أنت متأكد من حذف حساب';

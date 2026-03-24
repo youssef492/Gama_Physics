@@ -199,7 +199,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get announcementAdded => 'Announcement added successfully';
 
   @override
+  String get announcementUpdated => 'Announcement updated successfully';
+
+  @override
   String get announcementDeleted => 'Announcement deleted successfully';
+
+  @override
+  String get editAnnouncement => 'Edit Announcement';
+
+  @override
+  String get announcementViewers => 'Announcement Viewers';
+
+  @override
+  String get noAnnouncementViewers => 'No viewers yet';
 
   @override
   String get deleteStudentConfirm => 'Are you sure you want to delete';

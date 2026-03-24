@@ -427,6 +427,14 @@ class FirestoreService {
         .set(announcement.toMap());
   }
 
+  Future<void> updateAnnouncement(
+      String id, String title, String content) async {
+    await _db.collection('announcements').doc(id).update({
+      'title': title,
+      'content': content,
+    });
+  }
+
   Future<void> deleteAnnouncement(String id) async {
     await _db.collection('announcements').doc(id).delete();
   }

@@ -476,11 +476,35 @@ abstract class AppLocalizations {
   /// **'تم إضافة الإعلان بنجاح'**
   String get announcementAdded;
 
+  /// No description provided for @announcementUpdated.
+  ///
+  /// In ar, this message translates to:
+  /// **'تم تحديث الإعلان بنجاح'**
+  String get announcementUpdated;
+
   /// No description provided for @announcementDeleted.
   ///
   /// In ar, this message translates to:
   /// **'تم حذف الإعلان بنجاح'**
   String get announcementDeleted;
+
+  /// No description provided for @editAnnouncement.
+  ///
+  /// In ar, this message translates to:
+  /// **'تعديل الإعلان'**
+  String get editAnnouncement;
+
+  /// No description provided for @announcementViewers.
+  ///
+  /// In ar, this message translates to:
+  /// **'مشاهدو الإعلان'**
+  String get announcementViewers;
+
+  /// No description provided for @noAnnouncementViewers.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد مشاهدات حتى الآن'**
+  String get noAnnouncementViewers;
 
   /// No description provided for @deleteStudentConfirm.
   ///

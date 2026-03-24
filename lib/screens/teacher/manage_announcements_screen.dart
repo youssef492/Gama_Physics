@@ -23,9 +23,10 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
     context.read<DataProvider>().listenToAnnouncements();
   }
 
-  void _showAddDialog() {
-    final titleController = TextEditingController();
-    final contentController = TextEditingController();
+  void _showAddEditDialog([Announcement? announcement]) {
+    final isEditing = announcement != null;
+    final titleController = TextEditingController(text: announcement?.title ?? '');
+    final contentController = TextEditingController(text: announcement?.content ?? '');
     final l10n = AppLocalizations.of(context)!;
     bool isLoading = false;
 
@@ -35,7 +36,7 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
         builder: (ctx, setS) => AlertDialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(l10n.newAnnouncement),
+          title: Text(isEditing ? l10n.editAnnouncement : l10n.newAnnouncement),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -73,23 +74,34 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
                       setS(() => isLoading = true);
                       final author =
                           context.read<AuthProvider>().currentUser?.name ?? '';
-                      final announcement = Announcement(
-                        id: const Uuid().v4(),
-                        title: titleController.text.trim(),
-                        content: contentController.text.trim(),
-                        createdAt: DateTime.now(),
-                        authorName: author,
-                      );
+                      
+                      if (isEditing) {
+                        await context.read<DataProvider>().updateAnnouncement(
+                          announcement.id,
+                          titleController.text.trim(),
+                          contentController.text.trim(),
+                        );
+                      } else {
+                        final newAnnouncement = Announcement(
+                          id: const Uuid().v4(),
+                          title: titleController.text.trim(),
+                          content: contentController.text.trim(),
+                          createdAt: DateTime.now(),
+                          authorName: author,
+                        );
 
-                      await context
-                          .read<DataProvider>()
-                          .addAnnouncement(announcement);
+                        await context
+                            .read<DataProvider>()
+                            .addAnnouncement(newAnnouncement);
+                      }
 
                       if (ctx.mounted) {
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(l10n.announcementAdded),
+                            content: Text(isEditing 
+                                ? l10n.announcementUpdated 
+                                : l10n.announcementAdded),
                             backgroundColor: AppTheme.successGreen,
                           ),
                         );
@@ -102,7 +114,7 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white),
                     )
-                  : Text(l10n.save),
+                  : Text(isEditing ? l10n.update : l10n.save),
             ),
           ],
         ),
@@ -153,7 +165,7 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
         title: Text(l10n.announcements),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
+        onPressed: () => _showAddEditDialog(),
         backgroundColor: AppTheme.primaryBlue,
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -198,10 +210,29 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
                                 ),
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.delete,
-                                  color: AppTheme.errorRed),
-                              onPressed: () => _deleteAnnouncement(ann.id),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.remove_red_eye,
+                                      color: AppTheme.primaryBlue),
+                                  onPressed: () => Navigator.pushNamed(
+                                    context,
+                                    '/announcement-viewers',
+                                    arguments: ann,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.edit,
+                                      color: AppTheme.primaryBlue),
+                                  onPressed: () => _showAddEditDialog(ann),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete,
+                                      color: AppTheme.errorRed),
+                                  onPressed: () => _deleteAnnouncement(ann.id),
+                                ),
+                              ],
                             ),
                           ],
                         ),

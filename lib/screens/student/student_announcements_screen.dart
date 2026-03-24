@@ -3,7 +3,9 @@ import 'package:gama/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../providers/data_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../services/announcement_seen_service.dart';
+import '../../services/announcement_view_service.dart';
 import 'package:intl/intl.dart';
 
 class StudentAnnouncementsScreen extends StatefulWidget {
@@ -16,6 +18,8 @@ class StudentAnnouncementsScreen extends StatefulWidget {
 
 class _StudentAnnouncementsScreenState
     extends State<StudentAnnouncementsScreen> {
+  final Set<String> _recordedAnnouncements = {};
+
   @override
   void initState() {
     super.initState();
@@ -24,11 +28,28 @@ class _StudentAnnouncementsScreenState
     AnnouncementSeenService.markAsSeen();
   }
 
+  void _recordViewIfNeeded(String announcementId, BuildContext context) {
+    if (_recordedAnnouncements.contains(announcementId)) return;
+    _recordedAnnouncements.add(announcementId);
+
+    final user = context.read<AuthProvider>().currentUser;
+    if (user != null && user.role == 'student') {
+      AnnouncementViewService.recordView(
+        announcementId: announcementId,
+        studentId: user.uid,
+        studentName: user.name,
+        studentPhone: user.phone,
+        studentGrade: user.grade,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final locale = Localizations.localeOf(context).toString();
     final l10n = AppLocalizations.of(context)!;
     final data = context.watch<DataProvider>();
-    final DateFormat formatter = DateFormat('yyyy/MM/dd hh:mm a');
+    final DateFormat formatter = DateFormat('d MMM yyyy  hh:mm a', locale);
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.announcements),
@@ -58,6 +79,7 @@ class _StudentAnnouncementsScreenState
               itemCount: data.announcements.length,
               itemBuilder: (context, index) {
                 final ann = data.announcements[index];
+                _recordViewIfNeeded(ann.id, context);
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
                   shape: RoundedRectangleBorder(

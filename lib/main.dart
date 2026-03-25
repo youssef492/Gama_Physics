@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:fvp/fvp.dart' as fvp;
 import 'package:gama/l10n/app_localizations.dart';
 import 'package:gama/splash_screen.dart';
-import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'config/theme.dart';
@@ -16,8 +16,8 @@ import 'providers/language_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  MediaKit.ensureInitialized();
-
+  // MediaKit.ensureInitialized();
+  fvp.registerWith();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );

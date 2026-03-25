@@ -1,0 +1,31 @@
+name: Windows-build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: 🪟 Windows Build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - run: flutter pub get
+
+      - run: flutter build windows --release
+
+      - name: Zip output
+        run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath WindowsBuild.zip
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: WindowsBuild.zip
+          tag: v1.0
+          overwrite: true
+          body: "Windows Release"

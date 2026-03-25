@@ -1,5 +1,5 @@
-source 'https://cdn.jsdelivr.net/cocoa'
-platform :ios, '13.0'
+source 'https://github.com/CocoaPods/Specs.git'
+platform :ios, '12.0'
 
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 

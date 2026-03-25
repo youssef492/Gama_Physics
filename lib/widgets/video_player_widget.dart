@@ -83,14 +83,14 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     });
   }
 
-@override
-void dispose() {
-  _hideTimer?.cancel();
-  _seekHintTimer?.cancel();
-  _bufferSub?.cancel();          // ← أضفها
-  _player.dispose();
-  super.dispose();
-}
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    _seekHintTimer?.cancel();
+    _bufferSub?.cancel(); // ← أضفها
+    _player.dispose();
+    super.dispose();
+  }
 
   // ─── Load ─────────────────────────────────────────────────────────────────
 
@@ -131,7 +131,7 @@ void dispose() {
       if (!mounted) return;
       setState(() => _loadState = _VideoLoadState.buffering);
 
-      _bufferSub?.cancel();   // ← cancel القديم قبل ما تعمل جديد
+      _bufferSub?.cancel(); // ← cancel القديم قبل ما تعمل جديد
       _bufferSub = _player.stream.buffering.listen((b) {
         if (!b && mounted && _loadState == _VideoLoadState.buffering) {
           setState(() => _loadState = _VideoLoadState.ready);

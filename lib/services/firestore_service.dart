@@ -438,4 +438,22 @@ class FirestoreService {
   Future<void> deleteAnnouncement(String id) async {
     await _db.collection('announcements').doc(id).delete();
   }
+
+  /// حذف كود واحد بالـ id
+  Future<void> deleteCode(String id) async {
+    await _db.collection('accessCodes').doc(id).delete();
+  }
+
+  /// تعديل الحد الأقصى لاستخدامات كود معين
+  Future<void> updateCodeMaxUses(String id, int newMaxUses) async {
+    final doc = await _db.collection('accessCodes').doc(id).get();
+    final code = AccessCode.fromSnapshot(doc);
+    // لو كان "used" والـ maxUses الجديد أكبر → نرجعه active
+    final shouldReactivate =
+        code.status == 'used' && newMaxUses > code.currentUses;
+    await _db.collection('accessCodes').doc(id).update({
+      'maxUses': newMaxUses,
+      if (shouldReactivate) 'status': 'active',
+    });
+  }
 }

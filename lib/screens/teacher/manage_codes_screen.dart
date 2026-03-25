@@ -22,8 +22,6 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
   Map<String, String> _lessonTitles = {};
   bool _isExporting = false;
   final FirestoreService _firestoreService = FirestoreService();
-
-  // ─── نحفظ الـ codes اللي عملنالها load titles عشان نتجنب طلبات مكررة ──────
   final Set<String> _loadedLessonIds = {};
 
   @override
@@ -34,13 +32,10 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
     data.listenToAllPaidLessons();
   }
 
-  // ─── بنناديها بس لو في lesson IDs جديدة ──────────────────────────────────
   Future<void> _loadNewLessonTitles(List<AccessCode> codes) async {
     final newIds =
         codes.map((c) => c.lessonId).toSet().difference(_loadedLessonIds);
-
-    if (newIds.isEmpty) return; // مفيش جديد → مش هنطلب Firestore
-
+    if (newIds.isEmpty) return;
     _loadedLessonIds.addAll(newIds);
     final titles = await _firestoreService.getLessonTitles(newIds.toList());
     if (mounted) {
@@ -93,7 +88,6 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
     final l10n = AppLocalizations.of(context)!;
     final data = context.watch<DataProvider>();
 
-    // ─── بنناديها هنا بس لو فعلاً في IDs جديدة ───────────────────────────
     if (data.codes.isNotEmpty) {
       _loadNewLessonTitles(data.codes);
     }
@@ -162,16 +156,14 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
     );
   }
 
+  // ─── Lesson summaries strip ────────────────────────────────────────────────
   Widget _buildLessonSummaries(BuildContext context, List<AccessCode> codes) {
     if (codes.isEmpty) return const SizedBox.shrink();
-
     final l10n = AppLocalizations.of(context)!;
-
     final Map<String, List<AccessCode>> grouped = {};
     for (var code in codes) {
       grouped.putIfAbsent(code.lessonId, () => []).add(code);
     }
-
     final lessons = grouped.entries.toList();
 
     return SizedBox(
@@ -246,8 +238,11 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
     );
   }
 
+  // ─── Code card ─────────────────────────────────────────────────────────────
   Widget _buildCodeCard(BuildContext context, DataProvider data,
       AccessCode code, AppLocalizations l10n) {
+    final isArabic = context.read<LanguageProvider>().isArabic;
+
     Color statusColor;
     String statusText;
     switch (code.status) {
@@ -364,8 +359,11 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                       )),
                 ],
                 const SizedBox(height: 8),
-                Row(
+                // ─── Action buttons ───────────────────────────────────────
+                Wrap(
+                  spacing: 0,
                   children: [
+                    // Copy
                     IconButton(
                       icon: const Icon(Icons.copy, size: 20),
                       onPressed: () {
@@ -375,6 +373,7 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                       },
                       tooltip: l10n.copy,
                     ),
+                    // Edit expiry
                     IconButton(
                       icon: const Icon(Icons.edit_calendar,
                           color: AppTheme.primaryBlue, size: 20),
@@ -382,6 +381,16 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                           _showSingleExpiryDialog(context, data, code),
                       tooltip: l10n.editExpiryTooltip,
                     ),
+                    // Edit max uses
+                    IconButton(
+                      icon: const Icon(Icons.repeat,
+                          color: AppTheme.warningOrange, size: 20),
+                      onPressed: () =>
+                          _showEditMaxUsesDialog(context, data, code),
+                      tooltip:
+                          isArabic ? 'تعديل عدد الاستخدامات' : 'Edit max uses',
+                    ),
+                    // Disable / Enable
                     if (code.status == 'active')
                       IconButton(
                         icon: const Icon(Icons.block,
@@ -396,12 +405,348 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                         onPressed: () => data.enableCode(code.id),
                         tooltip: l10n.enable,
                       ),
+                    // Delete single code
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline,
+                          color: AppTheme.errorRed, size: 20),
+                      onPressed: () =>
+                          _showDeleteCodeDialog(context, data, code),
+                      tooltip: isArabic ? 'حذف الكود' : 'Delete code',
+                    ),
                   ],
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ─── Edit max uses dialog ──────────────────────────────────────────────────
+  void _showEditMaxUsesDialog(
+      BuildContext context, DataProvider data, AccessCode code) {
+    final isArabic = context.read<LanguageProvider>().isArabic;
+    final l10n = AppLocalizations.of(context)!;
+    final controller = TextEditingController(text: code.maxUses.toString());
+    bool isLoading = false;
+    final lessonTitle = _lessonTitles[code.lessonId] ?? '...';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.repeat, color: AppTheme.warningOrange, size: 22),
+              const SizedBox(width: 10),
+              Text(
+                isArabic ? 'تعديل عدد الاستخدامات' : 'Edit Max Uses',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Code info ──
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withAlpha(10),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.primaryBlue.withAlpha(30)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      code.code,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        letterSpacing: 3,
+                        color: AppTheme.primaryBlue,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      lessonTitle,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.textMuted),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              // ── Current usage chip ──
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.warningOrange.withAlpha(15),
+                  borderRadius: BorderRadius.circular(8),
+                  border:
+                      Border.all(color: AppTheme.warningOrange.withAlpha(50)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline,
+                        color: AppTheme.warningOrange, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      isArabic
+                          ? 'الاستخدام الحالي: ${code.currentUses} من ${code.maxUses}'
+                          : 'Current usage: ${code.currentUses} of ${code.maxUses}',
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.warningOrange),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: isArabic ? 'الحد الأقصى للاستخدامات' : 'Max uses',
+                  prefixIcon: const Icon(Icons.repeat),
+                  helperText: isArabic
+                      ? 'يجب أن يكون ≥ ${code.currentUses}'
+                      : 'Must be ≥ ${code.currentUses}',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton.icon(
+              icon: isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.save, size: 18),
+              label: Text(l10n.save),
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      final newMax = int.tryParse(controller.text.trim()) ?? 0;
+
+                      if (newMax <= 0) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(isArabic
+                                ? 'يجب أن يكون العدد أكبر من صفر'
+                                : 'Value must be greater than zero'),
+                            backgroundColor: AppTheme.errorRed,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (newMax < code.currentUses) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(isArabic
+                                ? 'لا يمكن أن يكون الحد أقل من الاستخدام الحالي (${code.currentUses})'
+                                : 'Cannot be less than current usage (${code.currentUses})'),
+                            backgroundColor: AppTheme.errorRed,
+                          ),
+                        );
+                        return;
+                      }
+
+                      setS(() => isLoading = true);
+                      await data.updateCodeMaxUses(code.id, newMax);
+
+                      if (ctx.mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(isArabic
+                                ? 'تم تحديث الحد الأقصى إلى $newMax استخدامات'
+                                : 'Max uses updated to $newMax'),
+                            backgroundColor: AppTheme.successGreen,
+                          ),
+                        );
+                      }
+                    },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── Delete single code dialog ─────────────────────────────────────────────
+  void _showDeleteCodeDialog(
+      BuildContext context, DataProvider data, AccessCode code) {
+    final isArabic = context.read<LanguageProvider>().isArabic;
+    final l10n = AppLocalizations.of(context)!;
+    bool isLoading = false;
+    final lessonTitle = _lessonTitles[code.lessonId] ?? '...';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(Icons.delete_forever,
+                  color: AppTheme.errorRed, size: 22),
+              const SizedBox(width: 10),
+              Text(
+                isArabic ? 'حذف الكود' : 'Delete Code',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Code preview ──
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.errorRed.withAlpha(10),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.errorRed.withAlpha(40)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      code.code,
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        letterSpacing: 3,
+                        color: AppTheme.errorRed,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      lessonTitle,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppTheme.textMuted),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              // ── Warning ──
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.errorRed.withAlpha(15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.errorRed.withAlpha(50)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded,
+                        color: AppTheme.errorRed, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        isArabic
+                            ? 'سيتم حذف هذا الكود نهائياً ولا يمكن التراجع عن هذا الإجراء.'
+                            : 'This code will be permanently deleted and cannot be undone.',
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.errorRed),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // ── Extra warning if code is already used ──
+              if (code.usedBy.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppTheme.warningOrange.withAlpha(15),
+                    borderRadius: BorderRadius.circular(8),
+                    border:
+                        Border.all(color: AppTheme.warningOrange.withAlpha(50)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.people_outline,
+                          color: AppTheme.warningOrange, size: 16),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          isArabic
+                              ? 'تنبيه: هذا الكود تم استخدامه بالفعل من ${code.usedBy.length} طالب.'
+                              : 'Warning: This code has been used by ${code.usedBy.length} student(s).',
+                          style: const TextStyle(
+                              fontSize: 12, color: AppTheme.warningOrange),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isLoading ? null : () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton.icon(
+              icon: isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.delete_forever, size: 18),
+              label: Text(l10n.deleteBtn),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.errorRed,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      setS(() => isLoading = true);
+                      await data.deleteCode(code.id);
+                      if (ctx.mounted) {
+                        Navigator.pop(ctx);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(isArabic
+                                ? 'تم حذف الكود ${code.code} بنجاح'
+                                : 'Code ${code.code} deleted successfully'),
+                            backgroundColor: AppTheme.successGreen,
+                          ),
+                        );
+                      }
+                    },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -754,6 +1099,7 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
     );
   }
 
+  // ─── Delete by lesson dialog ───────────────────────────────────────────────
   void _showDeleteByLessonDialog(BuildContext context, DataProvider data) {
     final isArabic = context.read<LanguageProvider>().isArabic;
     final l10n = AppLocalizations.of(context)!;
@@ -808,15 +1154,17 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                   border: Border.all(color: AppTheme.errorRed.withAlpha(50)),
                 ),
                 child: Row(
-                  children: const [
-                    Icon(Icons.warning_amber_rounded,
+                  children: [
+                    const Icon(Icons.warning_amber_rounded,
                         color: AppTheme.errorRed, size: 18),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'سيتم حذف كل الأكواد المرتبطة بهذا الدرس نهائياً.',
-                        style:
-                            TextStyle(fontSize: 12, color: AppTheme.errorRed),
+                        isArabic
+                            ? 'سيتم حذف كل الأكواد المرتبطة بهذا الدرس نهائياً.'
+                            : 'All codes for this lesson will be permanently deleted.',
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.errorRed),
                       ),
                     ),
                   ],
@@ -850,7 +1198,9 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
                       if (ctx.mounted) {
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content: Text('تم حذف $count كود بنجاح'),
+                          content: Text(isArabic
+                              ? 'تم حذف $count كود بنجاح'
+                              : 'Deleted $count codes successfully'),
                           backgroundColor: AppTheme.successGreen,
                         ));
                       }
@@ -869,7 +1219,6 @@ class _ManageCodesScreenState extends State<ManageCodesScreen> {
     final maxUsesController = TextEditingController(text: '3');
     final daysController = TextEditingController(text: '30');
     String? selectedLessonId;
-
     final paidLessons = data.allPaidLessons;
 
     showDialog(

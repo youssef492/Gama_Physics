@@ -119,7 +119,8 @@ class DataProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateAnnouncement(String id, String title, String content) async {
+  Future<void> updateAnnouncement(
+      String id, String title, String content) async {
     try {
       await _firestoreService.updateAnnouncement(id, title, content);
     } catch (e) {
@@ -436,4 +437,9 @@ class DataProvider with ChangeNotifier {
       return 0;
     }
   }
+
+  Future<void> deleteCode(String id) => _firestoreService.deleteCode(id);
+
+  Future<void> updateCodeMaxUses(String id, int newMaxUses) =>
+      _firestoreService.updateCodeMaxUses(id, newMaxUses);
 }

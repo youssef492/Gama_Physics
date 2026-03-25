@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart'; // ← مهم لـ defaultTargetPlatform
 import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 
 class YoutubeService {
@@ -27,7 +27,7 @@ class YoutubeService {
         debugPrint(
             '[YoutubeService] Fetching (attempt ${attempt + 1}): $videoId');
 
-        final id = VideoId(rawUrl);
+        final id = VideoId(videoId); // أفضل من تمرير rawUrl مباشرة
 
         final manifest = await _yt.videos.streamsClient
             .getManifest(id)
@@ -36,26 +36,67 @@ class YoutubeService {
         final video =
             await _yt.videos.get(id).timeout(const Duration(seconds: 30));
 
-        // ─── Best audio stream ─────────────────────────────────────────────
+        // ─────────────────────────────────────────────────────────────
+        // 1. Windows → نستخدم muxed streams فقط (أكثر استقراراً)
+        // ─────────────────────────────────────────────────────────────
+        if (defaultTargetPlatform == TargetPlatform.windows) {
+          debugPrint('[YoutubeService] Windows detected → using muxed streams');
+
+          final muxedStreams =
+              manifest.muxed.sortByVideoQuality().reversed.toList();
+
+          if (muxedStreams.isEmpty) {
+            throw Exception('No muxed streams available on Windows');
+          }
+
+          final allStreamsList = <YoutubeQualityOption>[];
+          final uniqueQualities = <String, YoutubeQualityOption>{};
+
+          for (var s in muxedStreams) {
+            final label = '${s.videoResolution.height}p';
+            if (!uniqueQualities.containsKey(label)) {
+              uniqueQualities[label] = YoutubeQualityOption(
+                label: label,
+                url: s.url.toString(),
+              );
+              allStreamsList.add(uniqueQualities[label]!);
+            }
+          }
+
+          final bestUrl = muxedStreams.first.url.toString();
+
+          final result = YoutubeStreamResult(
+            streamUrl: bestUrl,
+            title: video.title,
+            duration: video.duration ?? Duration.zero,
+            availableQualities: allStreamsList.map((q) => q.label).toList(),
+            allStreams: allStreamsList,
+          );
+
+          _cache[videoId] =
+              _CachedStream(result: result, cachedAt: DateTime.now());
+          debugPrint(
+              '[YoutubeService] Windows muxed done. Qualities: ${result.availableQualities}');
+          return result;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // 2. Android & iOS → HLS video-only + separate audio (أفضل جودة)
+        // ─────────────────────────────────────────────────────────────
+        debugPrint('[YoutubeService] Mobile platform → trying HLS');
+
         final audioStreams = manifest.audioOnly.sortByBitrate().toList();
         final bestAudio = audioStreams.isNotEmpty ? audioStreams.last : null;
         final audioUrl = bestAudio?.url.toString();
 
-        // ─── HLS streams ───────────────────────────────────────────────────
-        // HlsStreamInfo.toString() →  "[HLS] Video-only (230 | 640x360p25 | m3u8)"
-        // نعمل filter للـ video-only وbparse الـ height من الـ string
+        // استخراج HLS qualities
         final hlsAll = manifest.hls.toList();
-        debugPrint('[YoutubeService] All HLS: $hlsAll');
-
         final uniqueQualities = <String, YoutubeQualityOption>{};
 
         for (final s in hlsAll) {
           final str = s.toString();
-
-          // تخطى الـ audio-only streams
           if (str.contains('Audio-only')) continue;
 
-          // ✅ استخرج الـ height من pattern زي "640x360p25" أو "1280x720p30"
           final match = RegExp(r'\d+x(\d+)p').firstMatch(str);
           if (match == null) continue;
 
@@ -68,7 +109,6 @@ class YoutubeService {
               url: s.url.toString(),
               audioUrl: audioUrl,
             );
-            debugPrint('[YoutubeService] Found HLS quality: $label');
           }
         }
 
@@ -76,7 +116,6 @@ class YoutubeService {
         String bestUrl;
 
         if (uniqueQualities.isNotEmpty) {
-          // رتب تنازلياً (الأعلى جودة أول)
           allStreamsList = uniqueQualities.values.toList()
             ..sort((a, b) {
               final aH = int.tryParse(a.label.replaceAll('p', '')) ?? 0;
@@ -85,11 +124,9 @@ class YoutubeService {
             });
 
           bestUrl = allStreamsList.first.url;
-          debugPrint(
-              '[YoutubeService] HLS qualities: ${allStreamsList.map((q) => q.label).toList()}');
         } else {
-          // ─── Muxed fallback (360p) ─────────────────────────────────────
-          debugPrint('[YoutubeService] No HLS video → muxed fallback');
+          // Fallback لـ muxed لو ما لقيناش HLS
+          debugPrint('[YoutubeService] No HLS → muxed fallback');
           final muxedStreams =
               manifest.muxed.sortByVideoQuality().reversed.toList();
 
@@ -153,11 +190,13 @@ class YoutubeService {
 
   static void _cleanupCache() {
     if (_cache.length < _maxCacheSize) return;
+
     final expired = _cache.entries
         .where((e) => e.value.isExpired)
         .map((e) => e.key)
         .toList();
     for (var key in expired) _cache.remove(key);
+
     if (_cache.length >= _maxCacheSize) {
       final sorted = _cache.entries.toList()
         ..sort((a, b) => a.value.cachedAt.compareTo(b.value.cachedAt));
@@ -176,7 +215,9 @@ class _CachedStream {
   final YoutubeStreamResult result;
   final DateTime cachedAt;
   static const Duration _ttl = Duration(hours: 3);
+
   _CachedStream({required this.result, required this.cachedAt});
+
   bool get isExpired => DateTime.now().difference(cachedAt) > _ttl;
 }
 

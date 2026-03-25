@@ -15,6 +15,7 @@ import 'providers/language_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   MediaKit.ensureInitialized();
 
   await Firebase.initializeApp(
@@ -58,7 +59,6 @@ class GamaApp extends StatelessWidget {
               GlobalCupertinoLocalizations.delegate,
             ],
             routes: AppRoutes.routes,
-            // ─── SplashScreen هي الـ entry point دلوقتي ────────────────────
             home: const SplashScreen(),
           );
         },

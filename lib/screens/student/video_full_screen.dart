@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart'; // ← أضفناه
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gama/l10n/app_localizations.dart';
@@ -18,9 +19,8 @@ class VideoFullScreenScreen extends StatefulWidget {
   final double initialSpeed;
   final String initialQuality;
   final List<YoutubeQualityOption> qualityOptions;
-  final Player? player; // ✅ إضافة دعم تمرير الـ player
+  final Player? player;
 
-  // ─── YouTube constructor ────────────────────────────────────────────────
   const VideoFullScreenScreen.youtube({
     super.key,
     required String videoId,
@@ -29,18 +29,17 @@ class VideoFullScreenScreen extends StatefulWidget {
     this.initialSpeed = 1.0,
     this.initialQuality = 'auto',
     this.qualityOptions = const [],
-    this.player, // ✅
+    this.player,
   })  : videoId = videoId,
         embedUrl = null,
         isYoutube = true;
 
-  // ─── Web/Drive constructor ──────────────────────────────────────────────
   const VideoFullScreenScreen.web({
     super.key,
     required String embedUrl,
     required this.title,
-    this.startAt = Duration.zero, // ✅ أضفنا استلام وقت البدء للـ web
-    this.player, // ✅
+    this.startAt = Duration.zero,
+    this.player,
   })  : embedUrl = embedUrl,
         videoId = null,
         isYoutube = false,
@@ -53,7 +52,6 @@ class VideoFullScreenScreen extends StatefulWidget {
 }
 
 class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
-  // media_kit
   late final Player _player;
   late final VideoController _controller;
 
@@ -79,16 +77,20 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
     _qualityOptions = widget.qualityOptions;
     _forceLandscape();
 
-    // ✅ لو في player ممرر، استخدمه. غير كده انشئ واحد جديد.
+    // ✅ التعديل المهم: تعطيل Hardware Acceleration على Windows فقط
     _player = widget.player ?? Player();
-    _controller = VideoController(_player);
+    _controller = VideoController(
+      _player,
+      configuration: VideoControllerConfiguration(
+        enableHardwareAcceleration:
+            defaultTargetPlatform != TargetPlatform.windows,
+      ),
+    );
 
     if (widget.player == null) {
       _loadVideo();
     } else {
-      // لو ممرر، هو شغال فعلاً فبلاش loading
       _isLoading = false;
-      // تأكد أن الـ rate مظبوط
       _player.setRate(_speed);
     }
   }
@@ -97,7 +99,6 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
   void dispose() {
     _hideTimer?.cancel();
     _seekHintTimer?.cancel();
-    // ✅ احذف الـ player لو كنت أنت اللي منشئه بس
     if (widget.player == null) {
       _player.dispose();
     }
@@ -106,7 +107,6 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
   }
 
   // ─── Load ─────────────────────────────────────────────────────────────────
-
   Future<void> _loadVideo() async {
     setState(() {
       _isLoading = true;
@@ -115,7 +115,6 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
     try {
       String url;
       if (widget.isYoutube) {
-        // لو عنده quality options جاهزة استخدمها
         if (_qualityOptions.isNotEmpty) {
           final chosen = _qualityOptions
               .where((q) => q.label == _selectedQualityLabel)
@@ -123,7 +122,6 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
           url = chosen?.url ?? _qualityOptions.first.url;
           _selectedQualityLabel = chosen?.label ?? _qualityOptions.first.label;
         } else {
-          // جيب من youtube_explode
           final result = await YoutubeService.getStreamUrl(widget.videoId!);
           _qualityOptions = result.allStreams;
           _selectedQualityLabel =
@@ -151,7 +149,6 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
   }
 
   // ─── Orientation ──────────────────────────────────────────────────────────
-
   void _forceLandscape() {
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.landscapeLeft,
@@ -166,7 +163,6 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
   }
 
   // ─── Controls ─────────────────────────────────────────────────────────────
-
   void _toggleControls() {
     setState(() => _showControls = !_showControls);
     if (_showControls) _resetTimer();
@@ -254,8 +250,6 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
     _resetTimer();
   }
 
-  // ─── Pickers ──────────────────────────────────────────────────────────────
-
   void _showSpeedPicker() {
     _keepVisible();
     final l10n = AppLocalizations.of(context)!;
@@ -282,7 +276,6 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
   }
 
   // ─── Build ────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -290,14 +283,11 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Video ────────────────────────────────────────────────────────
           Video(
             controller: _controller,
             controls: NoVideoControls,
             fit: BoxFit.contain,
           ),
-
-          // ── Loading ──────────────────────────────────────────────────────
           if (_isLoading)
             Container(
               color: Colors.black87,
@@ -305,8 +295,6 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
                 child: CircularProgressIndicator(color: _kPrimary),
               ),
             ),
-
-          // ── Error ────────────────────────────────────────────────────────
           if (_hasError)
             Container(
               color: Colors.black87,
@@ -333,8 +321,6 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
                 ),
               ),
             ),
-
-          // ── Tap zones ────────────────────────────────────────────────────
           if (!_isLoading && !_hasError)
             Directionality(
               textDirection: TextDirection.ltr,
@@ -357,15 +343,11 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
                 ],
               ),
             ),
-
-          // ── Seek hint ────────────────────────────────────────────────────
           if (_seekHint != null)
             Directionality(
               textDirection: TextDirection.ltr,
               child: SeekHintOverlay(direction: _seekHint!),
             ),
-
-          // ── Controls overlay ─────────────────────────────────────────────
           if (!_isLoading && !_hasError)
             AnimatedOpacity(
               opacity: _showControls ? 1.0 : 0.0,
@@ -391,7 +373,6 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
                         return Stack(
                           fit: StackFit.expand,
                           children: [
-                            // Top bar: back + title
                             Positioned(
                               top: 0,
                               left: 0,
@@ -438,8 +419,6 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
                                 ),
                               ),
                             ),
-
-                            // Center play/pause
                             Center(
                               child: GestureDetector(
                                 onTap: _togglePlayPause,
@@ -459,8 +438,6 @@ class _VideoFullScreenScreenState extends State<VideoFullScreenScreen> {
                                 ),
                               ),
                             ),
-
-                            // Bottom bar — always LTR
                             Positioned(
                               bottom: 0,
                               left: 0,

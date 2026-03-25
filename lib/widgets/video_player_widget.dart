@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gama/l10n/app_localizations.dart';
 import 'package:gama/services/video_view_service.dart';
@@ -75,7 +76,14 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   void initState() {
     super.initState();
     _player = Player();
-    _controller = VideoController(_player);
+    _controller = VideoController(
+      _player,
+      configuration: VideoControllerConfiguration(
+        // تعطيل Hardware Acceleration على Windows فقط (يحل معظم مشاكل الـ black screen مع YouTube)
+        enableHardwareAcceleration:
+            defaultTargetPlatform != TargetPlatform.windows,
+      ),
+    );
     _loadVideo();
 
     _player.stream.playing.listen((isPlaying) {

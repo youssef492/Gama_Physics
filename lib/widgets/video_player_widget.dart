@@ -65,6 +65,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   Timer? _seekHintTimer;
   List<YoutubeQualityOption> _qualityOptions = [];
   String _selectedQualityLabel = 'auto';
+  StreamSubscription<bool>? _bufferSub;
 
   bool _viewRecorded = false;
 
@@ -82,13 +83,14 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     });
   }
 
-  @override
-  void dispose() {
-    _hideTimer?.cancel();
-    _seekHintTimer?.cancel();
-    _player.dispose();
-    super.dispose();
-  }
+@override
+void dispose() {
+  _hideTimer?.cancel();
+  _seekHintTimer?.cancel();
+  _bufferSub?.cancel();          // ← أضفها
+  _player.dispose();
+  super.dispose();
+}
 
   // ─── Load ─────────────────────────────────────────────────────────────────
 
@@ -129,13 +131,15 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       if (!mounted) return;
       setState(() => _loadState = _VideoLoadState.buffering);
 
-      _player.stream.buffering.listen((b) {
+      _bufferSub?.cancel();   // ← cancel القديم قبل ما تعمل جديد
+      _bufferSub = _player.stream.buffering.listen((b) {
         if (!b && mounted && _loadState == _VideoLoadState.buffering) {
           setState(() => _loadState = _VideoLoadState.ready);
         }
       });
 
-      Future.delayed(const Duration(seconds: 3), () {
+      // زود الـ fallback من 3 لـ 8 ثواني (خصوصاً على Windows)
+      Future.delayed(const Duration(seconds: 8), () {
         if (mounted && _loadState == _VideoLoadState.buffering) {
           setState(() => _loadState = _VideoLoadState.ready);
         }
@@ -579,11 +583,23 @@ class _LoadingOverlayState extends State<_LoadingOverlay>
   @override
   void initState() {
     super.initState();
-    _fakeController =
-        AnimationController(vsync: this, duration: const Duration(seconds: 8));
+    _fakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 8),
+    );
     _fakeProgress = Tween<double>(begin: 0.0, end: 0.92).animate(
-        CurvedAnimation(parent: _fakeController, curve: Curves.easeOutCubic));
-    _fakeController.forward();
+      CurvedAnimation(parent: _fakeController, curve: Curves.easeOutCubic),
+    );
+
+    // بعد ما يوصل 92% يعمل pulse بين 88% و 95% عشان يبان إنه شغال
+    _fakeController.forward().then((_) {
+      if (!mounted) return;
+      _fakeController.duration = const Duration(milliseconds: 900);
+      _fakeProgress = Tween<double>(begin: 0.88, end: 0.95).animate(
+        CurvedAnimation(parent: _fakeController, curve: Curves.easeInOut),
+      );
+      _fakeController.repeat(reverse: true);
+    });
   }
 
   @override

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/theme.dart';
@@ -25,7 +26,7 @@ class _SplashScreenState extends State<SplashScreen>
   late final AnimationController _subtitleController;
   late final AnimationController _pulseController;
 
-  // ─── Animations ───────────────────────────────────────────────────────────
+  // ─── Animations ────────────────────────────────────────────────────────────
   late final Animation<double> _logoScale;
   late final Animation<double> _logoOpacity;
   late final Animation<double> _textOpacity;
@@ -45,7 +46,6 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _initAnimations() {
-    // Logo: scale up from 0.3 + fade in
     _logoController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
@@ -60,7 +60,6 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    // Title text: fade + slide up
     _textController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -73,7 +72,6 @@ class _SplashScreenState extends State<SplashScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
 
-    // Divider line: expand from center
     _lineController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
@@ -82,7 +80,6 @@ class _SplashScreenState extends State<SplashScreen>
       CurvedAnimation(parent: _lineController, curve: Curves.easeInOut),
     );
 
-    // Subtitle: fade in
     _subtitleController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
@@ -91,7 +88,6 @@ class _SplashScreenState extends State<SplashScreen>
       CurvedAnimation(parent: _subtitleController, curve: Curves.easeIn),
     );
 
-    // Pulse on logo (idle loop)
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1800),
@@ -102,49 +98,87 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _startSequence() async {
-    // Step 1: animate logo in
     await _logoController.forward();
     await Future.delayed(const Duration(milliseconds: 100));
-
-    // Step 2: animate title
     await _textController.forward();
-
-    // Step 3: divider line
     _lineController.forward();
     await Future.delayed(const Duration(milliseconds: 200));
-
-    // Step 4: subtitle
     await _subtitleController.forward();
 
-    // Step 5: check connectivity + auth together
     await Future.wait([
       _checkConnectivityAndAuth(),
-      Future.delayed(const Duration(milliseconds: 800)), // مهلة minimum لـ UX
+      Future.delayed(const Duration(milliseconds: 800)),
     ]);
   }
 
-  Future<void> _checkConnectivityAndAuth() async {
-    // ─── Connectivity check ─────────────────────────────────────────────────
-    bool isOnline = false;
+  // ─── Connectivity check (محسّن لـ Windows + iOS + Android) ────────────────
+  Future<bool> _checkConnectivity() async {
+    // على Windows نستخدم HTTP request بدل DNS lookup
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      return await _checkConnectivityHttp();
+    }
+
+    // Android & iOS: نجرب DNS أولاً، لو فشل نجرب HTTP
     try {
       final result = await InternetAddress.lookup('google.com')
           .timeout(const Duration(seconds: 5));
-      isOnline = result.isNotEmpty && result.first.rawAddress.isNotEmpty;
+      if (result.isNotEmpty && result.first.rawAddress.isNotEmpty) {
+        return true;
+      }
     } on SocketException {
-      isOnline = false;
+      // فشل DNS → نجرب HTTP
     } on TimeoutException {
-      isOnline = false;
+      // timeout DNS → نجرب HTTP
+    } catch (_) {
+      // أي خطأ تاني → نجرب HTTP
     }
+
+    // Fallback: HTTP request
+    return await _checkConnectivityHttp();
+  }
+
+  Future<bool> _checkConnectivityHttp() async {
+    // قائمة من الـ endpoints نجرب فيها بالترتيب
+    const endpoints = [
+      'https://www.google.com',
+      'https://www.gstatic.com/generate_204',
+      'https://connectivity-check.ubuntu.com',
+    ];
+
+    for (final url in endpoints) {
+      try {
+        final client = HttpClient()
+          ..connectionTimeout = const Duration(seconds: 5);
+        final req = await client
+            .getUrl(Uri.parse(url))
+            .timeout(const Duration(seconds: 6));
+        req.headers.set(
+          HttpHeaders.userAgentHeader,
+          'Mozilla/5.0 GamaPhysics/1.0',
+        );
+        final res = await req.close().timeout(const Duration(seconds: 6));
+        await res.drain();
+        client.close();
+        // أي status code يعني في نت (حتى 204 أو 301)
+        if (res.statusCode < 500) return true;
+      } catch (_) {
+        // جرب الـ endpoint الجاي
+        continue;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _checkConnectivityAndAuth() async {
+    final bool isOnline = await _checkConnectivity();
 
     if (!isOnline) {
       if (!mounted) return;
 
-      // لو النت فصل: لو المستخدم طالب ومتحقق بالفعل، خليه يروح مباشرة للـ profile
-      // عشان يقدر يشوف QR Code حتى لو Firestore مش شغال.
       final auth = context.read<AuthProvider>();
 
+      // انتظر AuthProvider يخلص initialize لو لسه
       if (!auth.initialized) {
-        // الكاش بيحتاج وقت بسيط من initState؛ ندي فرصة قصيرة.
         await Future.doWhile(() async {
           await Future.delayed(const Duration(milliseconds: 100));
           return !auth.initialized;
@@ -153,6 +187,7 @@ class _SplashScreenState extends State<SplashScreen>
 
       if (!mounted) return;
 
+      // لو الطالب عنده cached session → روحه للـ profile عشان يشوف QR
       if (auth.isAuthenticated && auth.isStudent) {
         _navigate(auth, studentToProfile: true);
         return;
@@ -162,16 +197,15 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
-    // ─── Auth check ─────────────────────────────────────────────────────────
+    // ─── Online: تحقق من Auth ───────────────────────────────────────────────
     if (!mounted) return;
     final auth = context.read<AuthProvider>();
 
-    // ننتظم لو الـ auth لسه بيتحمل
     if (!auth.initialized) {
       await Future.doWhile(() async {
         await Future.delayed(const Duration(milliseconds: 100));
         return !auth.initialized;
-      }).timeout(const Duration(seconds: 8));
+      }).timeout(const Duration(seconds: 10));
     }
 
     if (!mounted) return;
@@ -263,14 +297,14 @@ class _SplashScreenState extends State<SplashScreen>
             ),
           ),
 
-          // ─── Main content ──────────────────────────────────────────────────
+          // ─── Main content ───────────────────────────────────────────────────
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Spacer(flex: 2),
 
-                // ─── Logo ──────────────────────────────────────────────────
+                // ─── Logo ───────────────────────────────────────────────────
                 AnimatedBuilder(
                   animation:
                       Listenable.merge([_logoController, _pulseController]),
@@ -402,10 +436,10 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-// ─── State enum ───────────────────────────────────────────────────────────────
+// ─── State enum ────────────────────────────────────────────────────────────────
 enum _SplashState { loading, offline }
 
-// ─── Loading indicator ────────────────────────────────────────────────────────
+// ─── Loading indicator ─────────────────────────────────────────────────────────
 class _LoadingIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -426,7 +460,7 @@ class _LoadingIndicator extends StatelessWidget {
   }
 }
 
-// ─── Offline widget ───────────────────────────────────────────────────────────
+// ─── Offline widget ────────────────────────────────────────────────────────────
 class _OfflineWidget extends StatelessWidget {
   final VoidCallback onRetry;
   const _OfflineWidget({required this.onRetry});

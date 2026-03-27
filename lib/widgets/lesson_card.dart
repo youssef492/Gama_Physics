@@ -30,7 +30,7 @@ class LessonCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Video icon
+              // Lesson content icon
               Container(
                 width: 56,
                 height: 56,
@@ -51,9 +51,11 @@ class LessonCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(
-                  lesson.isFree
-                      ? Icons.play_circle_outline
-                      : Icons.lock_outline,
+                  lesson.hasVideo
+                      ? (lesson.isFree
+                          ? Icons.play_circle_outline
+                          : Icons.lock_outline)
+                      : Icons.picture_as_pdf_outlined,
                   color: Colors.white,
                   size: 28,
                 ),

@@ -721,4 +721,44 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get fullScreen => 'عرض كامل';
+
+  @override
+  String get addPdfLinks => 'إضافة روابط ملفات PDF';
+
+  @override
+  String get pdfLinks => 'ملفات PDF للدرس';
+
+  @override
+  String get pdfUrl => 'رابط ملف PDF';
+
+  @override
+  String get addPdf => 'إضافة PDF';
+
+  @override
+  String get removePdf => 'إزالة';
+
+  @override
+  String get noPdfs => 'لا توجد ملفات PDF';
+
+  @override
+  String get downloadPdf => 'تحميل الملف';
+
+  @override
+  String get viewPdf => 'عرض الملف';
+
+  @override
+  String get invalidPdfUrl => 'رابط PDF غير صحيح';
+
+  @override
+  String get pdfPreview => 'معاينة PDF';
+
+  @override
+  String get openPdfInBrowser => 'فتح PDF في المتصفح';
+
+  @override
+  String get pdfDesktopHint =>
+      'على ويندوز ولينكس يُفتح ملف PDF في المتصفح الافتراضي (لا يتوفر عارض مدمج).';
+
+  @override
+  String get back => 'عودة';
 }

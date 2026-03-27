@@ -12,7 +12,6 @@ import 'config/routes.dart';
 import 'providers/auth_provider.dart';
 import 'providers/data_provider.dart';
 import 'providers/language_provider.dart';
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

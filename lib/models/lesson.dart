@@ -12,6 +12,7 @@ class Lesson {
   final bool isVisible;
   final int order;
   final DateTime createdAt;
+  final List<String> pdfUrls; // Additional PDF links from Google Drive
 
   Lesson({
     required this.id,
@@ -25,10 +26,13 @@ class Lesson {
     this.isVisible = true,
     required this.order,
     DateTime? createdAt,
+    this.pdfUrls = const [],
   }) : createdAt = createdAt ?? DateTime.now();
 
   bool get isFree => lessonType == 'free';
   bool get isPaid => lessonType == 'paid';
+  bool get hasVideo => videoUrl.trim().isNotEmpty;
+  bool get hasPdf => pdfUrls.isNotEmpty;
 
   String get embedUrl {
     if (videoType == 'youtube') {
@@ -76,6 +80,7 @@ class Lesson {
       'isVisible': isVisible,
       'order': order,
       'createdAt': Timestamp.fromDate(createdAt),
+      'pdfUrls': pdfUrls,
     };
   }
 
@@ -92,6 +97,7 @@ class Lesson {
       isVisible: map['isVisible'] ?? true,
       order: map['order'] ?? 0,
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      pdfUrls: List<String>.from(map['pdfUrls'] ?? []),
     );
   }
 
@@ -107,6 +113,7 @@ class Lesson {
     String? lessonType,
     bool? isVisible,
     int? order,
+    List<String>? pdfUrls,
   }) {
     return Lesson(
       id: id,
@@ -120,6 +127,7 @@ class Lesson {
       isVisible: isVisible ?? this.isVisible,
       order: order ?? this.order,
       createdAt: createdAt,
+      pdfUrls: pdfUrls ?? this.pdfUrls,
     );
   }
 }

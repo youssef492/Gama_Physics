@@ -130,6 +130,7 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
     String videoType = lesson?.videoType ?? 'youtube';
     String lessonType = lesson?.lessonType ?? 'free';
     bool isVisible = lesson?.isVisible ?? true;
+    List<String> pdfUrls = List.from(lesson?.pdfUrls ?? []);
 
     showDialog(
       context: context,
@@ -155,7 +156,10 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
                 TextField(
                   controller: urlController,
                   textDirection: TextDirection.ltr,
-                  decoration: InputDecoration(labelText: l10n.videoUrl),
+                  decoration: InputDecoration(
+                    labelText: l10n.videoUrl,
+                    hintText: 'Optional (you can create a PDF-only lesson)',
+                  ),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
@@ -201,6 +205,101 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
                   value: isVisible,
                   onChanged: (v) => setDialogState(() => isVisible = v),
                 ),
+                const SizedBox(height: 16),
+                // PDF Links Section
+                Text(
+                  l10n.addPdfLinks,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                if (pdfUrls.isNotEmpty) ...[
+                  Column(
+                    children: [
+                      for (int idx = 0; idx < pdfUrls.length; idx++)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    pdfUrls[idx]
+                                        .replaceFirst('/d/', '')
+                                        .split('/')[0],
+                                    style: const TextStyle(fontSize: 12),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.delete, size: 18),
+                                onPressed: () =>
+                                    setDialogState(() => pdfUrls.removeAt(idx)),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 24,
+                                  minHeight: 24,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      final pdfController = TextEditingController();
+                      showDialog(
+                        context: ctx,
+                        builder: (_) => AlertDialog(
+                          title: Text(l10n.addPdf),
+                          content: TextField(
+                            controller: pdfController,
+                            textDirection: TextDirection.ltr,
+                            decoration: InputDecoration(
+                              labelText: l10n.pdfUrl,
+                              hintText:
+                                  'https://drive.google.com/file/d/{FILE_ID}/view',
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(_),
+                              child: Text(l10n.cancel),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                final url = pdfController.text.trim();
+                                if (url.isNotEmpty &&
+                                    (url.contains('drive.google.com') ||
+                                        url.contains('/d/'))) {
+                                  setDialogState(() => pdfUrls.add(url));
+                                  Navigator.pop(_);
+                                }
+                              },
+                              child: Text(l10n.add),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.add),
+                    label: Text(l10n.addPdf),
+                  ),
+                ),
               ],
             ),
           ),
@@ -211,7 +310,9 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
               onPressed: () async {
                 final title = titleController.text.trim();
                 final url = urlController.text.trim();
-                if (title.isEmpty || url.isEmpty) return;
+                final hasPdf = pdfUrls.isNotEmpty;
+                if (title.isEmpty) return;
+                if (url.isEmpty && !hasPdf) return;
                 final orderNum = int.tryParse(orderController.text) ?? 1;
 
                 if (lesson == null) {
@@ -226,6 +327,7 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
                     lessonType: lessonType,
                     isVisible: isVisible,
                     order: orderNum,
+                    pdfUrls: pdfUrls,
                   ));
                 } else {
                   await data.updateLesson(lesson.id, {
@@ -236,6 +338,7 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
                     'lessonType': lessonType,
                     'isVisible': isVisible,
                     'order': orderNum,
+                    'pdfUrls': pdfUrls,
                   });
                 }
                 if (ctx.mounted) Navigator.pop(ctx);

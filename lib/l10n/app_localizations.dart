@@ -1489,6 +1489,84 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'عرض كامل'**
   String get fullScreen;
+
+  /// No description provided for @addPdfLinks.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة روابط ملفات PDF'**
+  String get addPdfLinks;
+
+  /// No description provided for @pdfLinks.
+  ///
+  /// In ar, this message translates to:
+  /// **'ملفات PDF للدرس'**
+  String get pdfLinks;
+
+  /// No description provided for @pdfUrl.
+  ///
+  /// In ar, this message translates to:
+  /// **'رابط ملف PDF'**
+  String get pdfUrl;
+
+  /// No description provided for @addPdf.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة PDF'**
+  String get addPdf;
+
+  /// No description provided for @removePdf.
+  ///
+  /// In ar, this message translates to:
+  /// **'إزالة'**
+  String get removePdf;
+
+  /// No description provided for @noPdfs.
+  ///
+  /// In ar, this message translates to:
+  /// **'لا توجد ملفات PDF'**
+  String get noPdfs;
+
+  /// No description provided for @downloadPdf.
+  ///
+  /// In ar, this message translates to:
+  /// **'تحميل الملف'**
+  String get downloadPdf;
+
+  /// No description provided for @viewPdf.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض الملف'**
+  String get viewPdf;
+
+  /// No description provided for @invalidPdfUrl.
+  ///
+  /// In ar, this message translates to:
+  /// **'رابط PDF غير صحيح'**
+  String get invalidPdfUrl;
+
+  /// No description provided for @pdfPreview.
+  ///
+  /// In ar, this message translates to:
+  /// **'معاينة PDF'**
+  String get pdfPreview;
+
+  /// No description provided for @openPdfInBrowser.
+  ///
+  /// In ar, this message translates to:
+  /// **'فتح PDF في المتصفح'**
+  String get openPdfInBrowser;
+
+  /// No description provided for @pdfDesktopHint.
+  ///
+  /// In ar, this message translates to:
+  /// **'على ويندوز ولينكس يُفتح ملف PDF في المتصفح الافتراضي (لا يتوفر عارض مدمج).'**
+  String get pdfDesktopHint;
+
+  /// No description provided for @back.
+  ///
+  /// In ar, this message translates to:
+  /// **'عودة'**
+  String get back;
 }
 
 class _AppLocalizationsDelegate

@@ -270,5 +270,18 @@
   },
   "exportPdf": "Export PDF",
   "all": "All",
-  "fullScreen": "Full Screen"
+  "fullScreen": "Full Screen",
+  "addPdfLinks": "Add PDF Links",
+  "pdfLinks": "Lesson PDFs",
+  "pdfUrl": "PDF Link",
+  "addPdf": "Add PDF",
+  "removePdf": "Remove",
+  "noPdfs": "No PDFs available",
+  "downloadPdf": "Download",
+  "viewPdf": "View",
+  "invalidPdfUrl": "Invalid PDF link",
+  "pdfPreview": "PDF Preview",
+  "openPdfInBrowser": "Open PDF in browser",
+  "pdfDesktopHint": "On Windows and Linux, PDFs open in your default browser (embedded WebView is not available).",
+  "back": "Back"
 }

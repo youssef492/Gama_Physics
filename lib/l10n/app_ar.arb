@@ -268,5 +268,18 @@
   },
   "exportPdf": "تصدير PDF",
   "all": "الكل",
-  "fullScreen": "عرض كامل"
+  "fullScreen": "عرض كامل",
+  "addPdfLinks": "إضافة روابط ملفات PDF",
+  "pdfLinks": "ملفات PDF للدرس",
+  "pdfUrl": "رابط ملف PDF",
+  "addPdf": "إضافة PDF",
+  "removePdf": "إزالة",
+  "noPdfs": "لا توجد ملفات PDF",
+  "downloadPdf": "تحميل الملف",
+  "viewPdf": "عرض الملف",
+  "invalidPdfUrl": "رابط PDF غير صحيح",
+  "pdfPreview": "معاينة PDF",
+  "openPdfInBrowser": "فتح PDF في المتصفح",
+  "pdfDesktopHint": "على ويندوز ولينكس يُفتح ملف PDF في المتصفح الافتراضي (لا يتوفر عارض مدمج).",
+  "back": "عودة"
 }

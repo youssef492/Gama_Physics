@@ -723,4 +723,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fullScreen => 'Full Screen';
+
+  @override
+  String get addPdfLinks => 'Add PDF Links';
+
+  @override
+  String get pdfLinks => 'Lesson PDFs';
+
+  @override
+  String get pdfUrl => 'PDF Link';
+
+  @override
+  String get addPdf => 'Add PDF';
+
+  @override
+  String get removePdf => 'Remove';
+
+  @override
+  String get noPdfs => 'No PDFs available';
+
+  @override
+  String get downloadPdf => 'Download';
+
+  @override
+  String get viewPdf => 'View';
+
+  @override
+  String get invalidPdfUrl => 'Invalid PDF link';
+
+  @override
+  String get pdfPreview => 'PDF Preview';
+
+  @override
+  String get openPdfInBrowser => 'Open PDF in browser';
+
+  @override
+  String get pdfDesktopHint =>
+      'On Windows and Linux, PDFs open in your default browser (embedded WebView is not available).';
+
+  @override
+  String get back => 'Back';
 }

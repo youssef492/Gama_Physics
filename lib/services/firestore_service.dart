@@ -427,11 +427,13 @@ class FirestoreService {
         .set(announcement.toMap());
   }
 
-  Future<void> updateAnnouncement(
-      String id, String title, String content) async {
+  Future<void> updateAnnouncement(String id, String title, String content,
+      {String? pdfUrl}) async {
     await _db.collection('announcements').doc(id).update({
       'title': title,
       'content': content,
+      'pdfUrl':
+          (pdfUrl != null && pdfUrl.isNotEmpty) ? pdfUrl : FieldValue.delete(),
     });
   }
 

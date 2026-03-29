@@ -1,6 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gama/l10n/app_localizations.dart';
+import 'package:gama/widgets/pdf_viewer_widget.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart'
+    show canLaunchUrl, LaunchMode, launchUrl;
 import '../../config/theme.dart';
 import '../../providers/data_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -149,12 +153,80 @@ class _StudentAnnouncementsScreenState
                             ),
                           ],
                         ),
+                        if (ann.pdfUrl != null && ann.pdfUrl!.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          const Divider(height: 1),
+                          const SizedBox(height: 10),
+                          _PdfAttachmentButton(
+                            pdfUrl: ann.pdfUrl!,
+                            title: ann.title,
+                          ),
+                        ],
                       ],
                     ),
                   ),
                 );
               },
             ),
+    );
+  }
+}
+
+class _PdfAttachmentButton extends StatelessWidget {
+  final String pdfUrl;
+  final String title;
+
+  const _PdfAttachmentButton({
+    required this.pdfUrl,
+    required this.title,
+  });
+
+  bool get _isWindows =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+
+  Future<void> _openOnWindows() async {
+    final uri = Uri.tryParse(pdfUrl);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppTheme.primaryBlue,
+          side: const BorderSide(color: AppTheme.primaryBlue),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+        ),
+        icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+        label: Text(
+          l10n.viewPdf, // أضيف المفتاح ده في ملف الترجمة
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+        onPressed: () {
+          if (_isWindows) {
+            // Windows → فتح في المتصفح مباشرة
+            _openOnWindows();
+          } else {
+            // Android / iOS → PdfViewerWidget الموجود عندك
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => PdfViewerWidget(
+                  pdfUrl: pdfUrl,
+                  title: title,
+                ),
+              ),
+            );
+          }
+        },
+      ),
     );
   }
 }

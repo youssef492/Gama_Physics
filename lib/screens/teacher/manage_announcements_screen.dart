@@ -25,8 +25,12 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
 
   void _showAddEditDialog([Announcement? announcement]) {
     final isEditing = announcement != null;
-    final titleController = TextEditingController(text: announcement?.title ?? '');
-    final contentController = TextEditingController(text: announcement?.content ?? '');
+    final titleController =
+        TextEditingController(text: announcement?.title ?? '');
+    final contentController =
+        TextEditingController(text: announcement?.content ?? '');
+    final pdfUrlController =
+        TextEditingController(text: announcement?.pdfUrl ?? '');
     final l10n = AppLocalizations.of(context)!;
     bool isLoading = false;
 
@@ -37,26 +41,51 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(isEditing ? l10n.editAnnouncement : l10n.newAnnouncement),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: InputDecoration(
-                  labelText: l10n.announcementTitle,
-                  border: const OutlineInputBorder(),
+          content: SingleChildScrollView(
+            // ← مهم عشان الـ keyboard ما يضغطش
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: InputDecoration(
+                    labelText: l10n.announcementTitle,
+                    border: const OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: contentController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  labelText: l10n.announcementContent,
-                  border: const OutlineInputBorder(),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: contentController,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    labelText: l10n.announcementContent,
+                    border: const OutlineInputBorder(),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                TextField(
+                  // ← جديد
+                  controller: pdfUrlController,
+                  keyboardType: TextInputType.url,
+                  decoration: InputDecoration(
+                    labelText: l10n.pdfLinkOptional,
+                    hintText: 'https://drive.google.com/file/d/...',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.picture_as_pdf_outlined),
+                    // زرار مسح سريع
+                    suffixIcon: ValueListenableBuilder(
+                      valueListenable: pdfUrlController,
+                      builder: (_, val, __) => val.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () => pdfUrlController.clear(),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -68,19 +97,23 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
                   ? null
                   : () async {
                       if (titleController.text.trim().isEmpty ||
-                          contentController.text.trim().isEmpty) {
-                        return;
-                      }
+                          contentController.text.trim().isEmpty) return;
+
+                      final pdfUrl = pdfUrlController.text.trim().isEmpty
+                          ? null
+                          : pdfUrlController.text.trim();
+
                       setS(() => isLoading = true);
                       final author =
                           context.read<AuthProvider>().currentUser?.name ?? '';
-                      
+
                       if (isEditing) {
                         await context.read<DataProvider>().updateAnnouncement(
-                          announcement.id,
-                          titleController.text.trim(),
-                          contentController.text.trim(),
-                        );
+                              announcement.id,
+                              titleController.text.trim(),
+                              contentController.text.trim(),
+                              pdfUrl,
+                            );
                       } else {
                         final newAnnouncement = Announcement(
                           id: const Uuid().v4(),
@@ -88,8 +121,8 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
                           content: contentController.text.trim(),
                           createdAt: DateTime.now(),
                           authorName: author,
+                          pdfUrl: pdfUrl, // ← جديد
                         );
-
                         await context
                             .read<DataProvider>()
                             .addAnnouncement(newAnnouncement);
@@ -99,8 +132,8 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
                         Navigator.pop(ctx);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text(isEditing 
-                                ? l10n.announcementUpdated 
+                            content: Text(isEditing
+                                ? l10n.announcementUpdated
                                 : l10n.announcementAdded),
                             backgroundColor: AppTheme.successGreen,
                           ),

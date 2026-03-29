@@ -1535,7 +1535,7 @@ abstract class AppLocalizations {
   /// No description provided for @viewPdf.
   ///
   /// In ar, this message translates to:
-  /// **'عرض الملف'**
+  /// **'عرض ملف PDF'**
   String get viewPdf;
 
   /// No description provided for @invalidPdfUrl.
@@ -1567,6 +1567,18 @@ abstract class AppLocalizations {
   /// In ar, this message translates to:
   /// **'عودة'**
   String get back;
+
+  /// No description provided for @pdfLinkOptional.
+  ///
+  /// In ar, this message translates to:
+  /// **'رابط PDF (اختياري)'**
+  String get pdfLinkOptional;
+
+  /// No description provided for @invalidUrl.
+  ///
+  /// In ar, this message translates to:
+  /// **'رابط غير صالح'**
+  String get invalidUrl;
 }
 
 class _AppLocalizationsDelegate

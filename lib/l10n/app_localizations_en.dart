@@ -746,7 +746,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadPdf => 'Download';
 
   @override
-  String get viewPdf => 'View';
+  String get viewPdf => 'View PDF';
 
   @override
   String get invalidPdfUrl => 'Invalid PDF link';
@@ -763,4 +763,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get back => 'Back';
+
+  @override
+  String get pdfLinkOptional => 'PDF Link (optional)';
+
+  @override
+  String get invalidUrl => 'Invalid URL';
 }

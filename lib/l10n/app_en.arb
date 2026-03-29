@@ -283,5 +283,8 @@
   "pdfPreview": "PDF Preview",
   "openPdfInBrowser": "Open PDF in browser",
   "pdfDesktopHint": "On Windows and Linux, PDFs open in your default browser (embedded WebView is not available).",
-  "back": "Back"
+  "back": "Back",
+  "viewPdf": "View PDF",
+  "pdfLinkOptional": "PDF Link (optional)",
+  "invalidUrl": "Invalid URL"
 }

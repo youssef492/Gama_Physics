@@ -726,13 +726,25 @@ class AppLocalizationsAr extends AppLocalizations {
   String get addPdfLinks => 'إضافة روابط ملفات PDF';
 
   @override
+  String get addImageLinks => 'إضافة روابط الصور';
+
+  @override
   String get pdfLinks => 'ملفات PDF للدرس';
+
+  @override
+  String get imageLinks => 'صور الدرس';
 
   @override
   String get pdfUrl => 'رابط ملف PDF';
 
   @override
+  String get imageUrl => 'رابط الصورة';
+
+  @override
   String get addPdf => 'إضافة PDF';
+
+  @override
+  String get addImage => 'إضافة صورة';
 
   @override
   String get removePdf => 'إزالة';
@@ -747,10 +759,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get viewPdf => 'عرض ملف PDF';
 
   @override
+  String get viewImage => 'عرض الصورة';
+
+  @override
   String get invalidPdfUrl => 'رابط PDF غير صحيح';
 
   @override
+  String get invalidImageUrl => 'رابط الصورة غير صحيح';
+
+  @override
   String get pdfPreview => 'معاينة PDF';
+
+  @override
+  String get imagePreview => 'معاينة الصورة';
 
   @override
   String get openPdfInBrowser => 'فتح PDF في المتصفح';

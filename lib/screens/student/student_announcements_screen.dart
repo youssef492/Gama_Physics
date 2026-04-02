@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:gama/l10n/app_localizations.dart';
+import 'package:gama/widgets/drive_image_viewer_widget.dart';
 import 'package:gama/widgets/pdf_viewer_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart'
@@ -162,6 +163,15 @@ class _StudentAnnouncementsScreenState
                             title: ann.title,
                           ),
                         ],
+                        if (ann.imageUrl != null && ann.imageUrl!.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          const Divider(height: 1),
+                          const SizedBox(height: 10),
+                          _ImageAttachmentCard(
+                            imageUrl: ann.imageUrl!,
+                            title: ann.title,
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -184,8 +194,29 @@ class _PdfAttachmentButton extends StatelessWidget {
   bool get _isWindows =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
 
+  String? _extractFileId(String url) {
+    final normalizedUrl = url.trim();
+    if (normalizedUrl.isEmpty) return null;
+
+    if (normalizedUrl.contains('/file/d/')) {
+      final parts = normalizedUrl.split('/file/d/');
+      if (parts.length > 1) return parts[1].split('/').first.split('?').first;
+    }
+
+    if (normalizedUrl.contains('/d/')) {
+      final parts = normalizedUrl.split('/d/');
+      if (parts.length > 1) return parts[1].split('/').first.split('?').first;
+    }
+
+    return Uri.tryParse(normalizedUrl)?.queryParameters['id'];
+  }
+
   Future<void> _openOnWindows() async {
-    final uri = Uri.tryParse(pdfUrl);
+    final fileId = _extractFileId(pdfUrl);
+    final previewUrl = fileId == null
+        ? pdfUrl
+        : 'https://drive.google.com/file/d/$fileId/preview?rm=minimal';
+    final uri = Uri.tryParse(previewUrl);
     if (uri != null && await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
@@ -227,6 +258,67 @@ class _PdfAttachmentButton extends StatelessWidget {
           }
         },
       ),
+    );
+  }
+}
+
+class _ImageAttachmentCard extends StatelessWidget {
+  final String imageUrl;
+  final String title;
+
+  const _ImageAttachmentCard({
+    required this.imageUrl,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: DriveImage(
+            sourceUrl: imageUrl,
+            width: double.infinity,
+            height: 180,
+            fit: BoxFit.cover,
+            invalidLabel: l10n.invalidImageUrl,
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primaryBlue,
+              side: const BorderSide(color: AppTheme.primaryBlue),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DriveImageViewerWidget(
+                    imageUrl: imageUrl,
+                    title: title,
+                  ),
+                ),
+              );
+            },
+            icon: const Icon(Icons.image_outlined, size: 18),
+            label: Text(
+              l10n.viewImage,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

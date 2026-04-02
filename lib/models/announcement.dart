@@ -7,6 +7,7 @@ class Announcement {
   final DateTime createdAt;
   final String authorName;
   final String? pdfUrl;
+  final String? imageUrl;
   Announcement({
     required this.id,
     required this.title,
@@ -14,6 +15,7 @@ class Announcement {
     required this.createdAt,
     this.authorName = '',
     this.pdfUrl,
+    this.imageUrl,
   });
 
   Map<String, dynamic> toMap() {
@@ -24,6 +26,7 @@ class Announcement {
       'createdAt': Timestamp.fromDate(createdAt),
       'authorName': authorName,
       'pdfUrl': pdfUrl,
+      'imageUrl': imageUrl,
     };
   }
 
@@ -36,6 +39,7 @@ class Announcement {
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       authorName: data['authorName'] ?? '',
       pdfUrl: data['pdfUrl'],
+      imageUrl: data['imageUrl'],
     );
   }
 }

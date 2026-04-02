@@ -728,13 +728,25 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addPdfLinks => 'Add PDF Links';
 
   @override
+  String get addImageLinks => 'Add Image Links';
+
+  @override
   String get pdfLinks => 'Lesson PDFs';
+
+  @override
+  String get imageLinks => 'Lesson Images';
 
   @override
   String get pdfUrl => 'PDF Link';
 
   @override
+  String get imageUrl => 'Image Link';
+
+  @override
   String get addPdf => 'Add PDF';
+
+  @override
+  String get addImage => 'Add Image';
 
   @override
   String get removePdf => 'Remove';
@@ -749,10 +761,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get viewPdf => 'View PDF';
 
   @override
+  String get viewImage => 'View Image';
+
+  @override
   String get invalidPdfUrl => 'Invalid PDF link';
 
   @override
+  String get invalidImageUrl => 'Invalid image link';
+
+  @override
   String get pdfPreview => 'PDF Preview';
+
+  @override
+  String get imagePreview => 'Image Preview';
 
   @override
   String get openPdfInBrowser => 'Open PDF in browser';

@@ -55,7 +55,9 @@ class LessonCard extends StatelessWidget {
                       ? (lesson.isFree
                           ? Icons.play_circle_outline
                           : Icons.lock_outline)
-                      : Icons.picture_as_pdf_outlined,
+                      : lesson.hasImages
+                          ? Icons.image_outlined
+                          : Icons.picture_as_pdf_outlined,
                   color: Colors.white,
                   size: 28,
                 ),

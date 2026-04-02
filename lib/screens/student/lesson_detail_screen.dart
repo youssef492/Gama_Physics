@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../config/theme.dart';
 import '../../models/lesson.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/drive_image_viewer_widget.dart';
 import '../../widgets/video_player_widget.dart';
 import '../../widgets/pdf_viewer_widget.dart';
 
@@ -201,6 +202,115 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                     ),
                   ],
                   // 📄 PDF Section
+                  if (lesson.imageUrls.isNotEmpty) ...[
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        const Icon(Icons.image_outlined,
+                            color: AppTheme.primaryBlue),
+                        const SizedBox(width: 8),
+                        Text(
+                          l10n.imageLinks,
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: lesson.imageUrls.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, idx) {
+                        final imageUrl = lesson.imageUrls[idx];
+                        final isValid =
+                            _extractFileIdFromUrl(imageUrl) != null;
+
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isValid
+                                ? AppTheme.primaryBlue.withAlpha(10)
+                                : Colors.red.withAlpha(10),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isValid
+                                  ? AppTheme.primaryBlue.withAlpha(40)
+                                  : Colors.red.withAlpha(50),
+                            ),
+                          ),
+                          child: isValid
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: DriveImage(
+                                        sourceUrl: imageUrl,
+                                        width: double.infinity,
+                                        height: 180,
+                                        fit: BoxFit.cover,
+                                        invalidLabel: l10n.invalidImageUrl,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            '${l10n.imagePreview} ${idx + 1}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        ElevatedButton.icon(
+                                          onPressed: () {
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    DriveImageViewerWidget(
+                                                  imageUrl: imageUrl,
+                                                  title:
+                                                      '${lesson.title} - ${l10n.imagePreview} ${idx + 1}',
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                          icon: const Icon(Icons.fullscreen,
+                                              size: 16),
+                                          label: Text(l10n.viewImage),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                AppTheme.primaryBlue,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 8,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                )
+                              : Center(
+                                  child: Text(
+                                    l10n.invalidImageUrl,
+                                    style: TextStyle(
+                                      color: Colors.red.shade600,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                        );
+                      },
+                    ),
+                  ],
                   if (lesson.pdfUrls.isNotEmpty) ...[
                     const SizedBox(height: 24),
                     Row(
@@ -255,20 +365,6 @@ class _LessonDetailScreenState extends State<LessonDetailScreen> {
                                               fontWeight: FontWeight.w600,
                                               fontSize: 13,
                                             ),
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            pdfUrl
-                                                .split('/d/')
-                                                .last
-                                                .split('/')
-                                                .first,
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
                                       ),

@@ -120,9 +120,15 @@ class DataProvider with ChangeNotifier {
   }
 
   Future<void> updateAnnouncement(
-      String id, String title, String content, String? pdfUrl) async {
+      String id, String title, String content, String? pdfUrl, String? imageUrl) async {
     try {
-      await _firestoreService.updateAnnouncement(id, title, content, pdfUrl: pdfUrl);
+      await _firestoreService.updateAnnouncement(
+        id,
+        title,
+        content,
+        pdfUrl: pdfUrl,
+        imageUrl: imageUrl,
+      );
     } catch (e) {
       _handleError(e);
     }

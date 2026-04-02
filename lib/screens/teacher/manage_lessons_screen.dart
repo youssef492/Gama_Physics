@@ -131,6 +131,7 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
     String lessonType = lesson?.lessonType ?? 'free';
     bool isVisible = lesson?.isVisible ?? true;
     List<String> pdfUrls = List.from(lesson?.pdfUrls ?? []);
+    List<String> imageUrls = List.from(lesson?.imageUrls ?? []);
 
     showDialog(
       context: context,
@@ -300,6 +301,98 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
                     label: Text(l10n.addPdf),
                   ),
                 ),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.addImageLinks,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                if (imageUrls.isNotEmpty) ...[
+                  Column(
+                    children: [
+                      for (int idx = 0; idx < imageUrls.length; idx++)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '${l10n.imagePreview} ${idx + 1}',
+                                    style: const TextStyle(fontSize: 12),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.delete, size: 18),
+                                onPressed: () => setDialogState(
+                                    () => imageUrls.removeAt(idx)),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 24,
+                                  minHeight: 24,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      final imageController = TextEditingController();
+                      showDialog(
+                        context: ctx,
+                        builder: (_) => AlertDialog(
+                          title: Text(l10n.addImage),
+                          content: TextField(
+                            controller: imageController,
+                            textDirection: TextDirection.ltr,
+                            decoration: InputDecoration(
+                              labelText: l10n.imageUrl,
+                              hintText:
+                                  'https://drive.google.com/file/d/{FILE_ID}/view',
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(_),
+                              child: Text(l10n.cancel),
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                final url = imageController.text.trim();
+                                if (url.isNotEmpty &&
+                                    (url.contains('drive.google.com') ||
+                                        url.contains('/d/'))) {
+                                  setDialogState(() => imageUrls.add(url));
+                                  Navigator.pop(_);
+                                }
+                              },
+                              child: Text(l10n.add),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.add_photo_alternate_outlined),
+                    label: Text(l10n.addImage),
+                  ),
+                ),
               ],
             ),
           ),
@@ -311,8 +404,9 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
                 final title = titleController.text.trim();
                 final url = urlController.text.trim();
                 final hasPdf = pdfUrls.isNotEmpty;
+                final hasImages = imageUrls.isNotEmpty;
                 if (title.isEmpty) return;
-                if (url.isEmpty && !hasPdf) return;
+                if (url.isEmpty && !hasPdf && !hasImages) return;
                 final orderNum = int.tryParse(orderController.text) ?? 1;
 
                 if (lesson == null) {
@@ -328,6 +422,7 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
                     isVisible: isVisible,
                     order: orderNum,
                     pdfUrls: pdfUrls,
+                    imageUrls: imageUrls,
                   ));
                 } else {
                   await data.updateLesson(lesson.id, {
@@ -339,6 +434,7 @@ class _ManageLessonsScreenState extends State<ManageLessonsScreen> {
                     'isVisible': isVisible,
                     'order': orderNum,
                     'pdfUrls': pdfUrls,
+                    'imageUrls': imageUrls,
                   });
                 }
                 if (ctx.mounted) Navigator.pop(ctx);

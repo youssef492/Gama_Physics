@@ -428,12 +428,15 @@ class FirestoreService {
   }
 
   Future<void> updateAnnouncement(String id, String title, String content,
-      {String? pdfUrl}) async {
+      {String? pdfUrl, String? imageUrl}) async {
     await _db.collection('announcements').doc(id).update({
       'title': title,
       'content': content,
       'pdfUrl':
           (pdfUrl != null && pdfUrl.isNotEmpty) ? pdfUrl : FieldValue.delete(),
+      'imageUrl': (imageUrl != null && imageUrl.isNotEmpty)
+          ? imageUrl
+          : FieldValue.delete(),
     });
   }
 

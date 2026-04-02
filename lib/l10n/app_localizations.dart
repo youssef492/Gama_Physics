@@ -1496,11 +1496,23 @@ abstract class AppLocalizations {
   /// **'إضافة روابط ملفات PDF'**
   String get addPdfLinks;
 
+  /// No description provided for @addImageLinks.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة روابط الصور'**
+  String get addImageLinks;
+
   /// No description provided for @pdfLinks.
   ///
   /// In ar, this message translates to:
   /// **'ملفات PDF للدرس'**
   String get pdfLinks;
+
+  /// No description provided for @imageLinks.
+  ///
+  /// In ar, this message translates to:
+  /// **'صور الدرس'**
+  String get imageLinks;
 
   /// No description provided for @pdfUrl.
   ///
@@ -1508,11 +1520,23 @@ abstract class AppLocalizations {
   /// **'رابط ملف PDF'**
   String get pdfUrl;
 
+  /// No description provided for @imageUrl.
+  ///
+  /// In ar, this message translates to:
+  /// **'رابط الصورة'**
+  String get imageUrl;
+
   /// No description provided for @addPdf.
   ///
   /// In ar, this message translates to:
   /// **'إضافة PDF'**
   String get addPdf;
+
+  /// No description provided for @addImage.
+  ///
+  /// In ar, this message translates to:
+  /// **'إضافة صورة'**
+  String get addImage;
 
   /// No description provided for @removePdf.
   ///
@@ -1538,17 +1562,35 @@ abstract class AppLocalizations {
   /// **'عرض ملف PDF'**
   String get viewPdf;
 
+  /// No description provided for @viewImage.
+  ///
+  /// In ar, this message translates to:
+  /// **'عرض الصورة'**
+  String get viewImage;
+
   /// No description provided for @invalidPdfUrl.
   ///
   /// In ar, this message translates to:
   /// **'رابط PDF غير صحيح'**
   String get invalidPdfUrl;
 
+  /// No description provided for @invalidImageUrl.
+  ///
+  /// In ar, this message translates to:
+  /// **'رابط الصورة غير صحيح'**
+  String get invalidImageUrl;
+
   /// No description provided for @pdfPreview.
   ///
   /// In ar, this message translates to:
   /// **'معاينة PDF'**
   String get pdfPreview;
+
+  /// No description provided for @imagePreview.
+  ///
+  /// In ar, this message translates to:
+  /// **'معاينة الصورة'**
+  String get imagePreview;
 
   /// No description provided for @openPdfInBrowser.
   ///

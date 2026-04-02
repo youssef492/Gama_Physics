@@ -13,6 +13,7 @@ class Lesson {
   final int order;
   final DateTime createdAt;
   final List<String> pdfUrls; // Additional PDF links from Google Drive
+  final List<String> imageUrls; // Additional image links from Google Drive
 
   Lesson({
     required this.id,
@@ -27,12 +28,14 @@ class Lesson {
     required this.order,
     DateTime? createdAt,
     this.pdfUrls = const [],
+    this.imageUrls = const [],
   }) : createdAt = createdAt ?? DateTime.now();
 
   bool get isFree => lessonType == 'free';
   bool get isPaid => lessonType == 'paid';
   bool get hasVideo => videoUrl.trim().isNotEmpty;
   bool get hasPdf => pdfUrls.isNotEmpty;
+  bool get hasImages => imageUrls.isNotEmpty;
 
   String get embedUrl {
     if (videoType == 'youtube') {
@@ -81,6 +84,7 @@ class Lesson {
       'order': order,
       'createdAt': Timestamp.fromDate(createdAt),
       'pdfUrls': pdfUrls,
+      'imageUrls': imageUrls,
     };
   }
 
@@ -98,6 +102,7 @@ class Lesson {
       order: map['order'] ?? 0,
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       pdfUrls: List<String>.from(map['pdfUrls'] ?? []),
+      imageUrls: List<String>.from(map['imageUrls'] ?? []),
     );
   }
 
@@ -114,6 +119,7 @@ class Lesson {
     bool? isVisible,
     int? order,
     List<String>? pdfUrls,
+    List<String>? imageUrls,
   }) {
     return Lesson(
       id: id,
@@ -128,6 +134,7 @@ class Lesson {
       order: order ?? this.order,
       createdAt: createdAt,
       pdfUrls: pdfUrls ?? this.pdfUrls,
+      imageUrls: imageUrls ?? this.imageUrls,
     );
   }
 }

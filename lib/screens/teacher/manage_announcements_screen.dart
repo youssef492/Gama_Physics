@@ -31,6 +31,8 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
         TextEditingController(text: announcement?.content ?? '');
     final pdfUrlController =
         TextEditingController(text: announcement?.pdfUrl ?? '');
+    final imageUrlController =
+        TextEditingController(text: announcement?.imageUrl ?? '');
     final l10n = AppLocalizations.of(context)!;
     bool isLoading = false;
 
@@ -84,6 +86,26 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: imageUrlController,
+                  keyboardType: TextInputType.url,
+                  decoration: InputDecoration(
+                    labelText: l10n.imageUrl,
+                    hintText: 'https://drive.google.com/file/d/...',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.image_outlined),
+                    suffixIcon: ValueListenableBuilder(
+                      valueListenable: imageUrlController,
+                      builder: (_, val, __) => val.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18),
+                              onPressed: () => imageUrlController.clear(),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -102,6 +124,9 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
                       final pdfUrl = pdfUrlController.text.trim().isEmpty
                           ? null
                           : pdfUrlController.text.trim();
+                      final imageUrl = imageUrlController.text.trim().isEmpty
+                          ? null
+                          : imageUrlController.text.trim();
 
                       setS(() => isLoading = true);
                       final author =
@@ -113,6 +138,7 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
                               titleController.text.trim(),
                               contentController.text.trim(),
                               pdfUrl,
+                              imageUrl,
                             );
                       } else {
                         final newAnnouncement = Announcement(
@@ -122,6 +148,7 @@ class _ManageAnnouncementsScreenState extends State<ManageAnnouncementsScreen> {
                           createdAt: DateTime.now(),
                           authorName: author,
                           pdfUrl: pdfUrl, // ← جديد
+                          imageUrl: imageUrl,
                         );
                         await context
                             .read<DataProvider>()

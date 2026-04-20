@@ -101,8 +101,11 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   }
 
   // ─── Load ─────────────────────────────────────────────────────────────────
-  Future<void> _loadVideo(
-      {String? overrideUrl, String? overrideQuality}) async {
+  Future<void> _loadVideo({
+    String? overrideUrl,
+    String? overrideQuality,
+    bool autoPlay = true,
+  }) async {
     if (!mounted) return;
 
     final old = _controller;
@@ -147,6 +150,10 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       await ctrl.setPlaybackSpeed(_playbackSpeed);
 
       ctrl.addListener(_onPlayingChanged);
+
+      if (autoPlay) {
+        await ctrl.play();
+      }
 
       setState(() => _loadState = _VideoLoadState.ready);
     } on TimeoutException {
@@ -265,13 +272,21 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       setState(() => _qualityOptions = result.allStreams);
 
       // reload بالـ URL الجديد
-      await _loadVideo(overrideUrl: url, overrideQuality: option.label);
+      await _loadVideo(
+        overrideUrl: url,
+        overrideQuality: option.label,
+        autoPlay: false,
+      );
 
       // رجع للموضع القديم
       await _controller?.seekTo(pos);
       if (wasPlaying) await _controller?.play();
     } catch (_) {
-      await _loadVideo(overrideUrl: option.url, overrideQuality: option.label);
+      await _loadVideo(
+        overrideUrl: option.url,
+        overrideQuality: option.label,
+        autoPlay: false,
+      );
       await _controller?.seekTo(pos);
       if (wasPlaying) await _controller?.play();
     }
@@ -995,9 +1010,9 @@ class _VlcBarFS extends StatelessWidget {
   }
 }
 
-class _LoadingOverlay extends StatefulWidget {
+class _LoadingOverlay extends StatelessWidget {
   final String message;
-  final VideoPlayerController? controller; // ← Changed from ValueNotifier
+  final VideoPlayerController? controller;
 
   const _LoadingOverlay({
     super.key,
@@ -1006,117 +1021,25 @@ class _LoadingOverlay extends StatefulWidget {
   });
 
   @override
-  State<_LoadingOverlay> createState() => _LoadingOverlayState();
-}
-
-class _LoadingOverlayState extends State<_LoadingOverlay>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _fakeCtrl;
-  late Animation<double> _fakeAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _fakeCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 8),
-    );
-    _fakeAnim = Tween<double>(begin: 0.0, end: 0.92).animate(
-      CurvedAnimation(parent: _fakeCtrl, curve: Curves.easeOutCubic),
-    );
-    _fakeCtrl.forward().then((_) {
-      if (!mounted) return;
-      _fakeCtrl.duration = const Duration(milliseconds: 900);
-      _fakeAnim = Tween<double>(begin: 0.88, end: 0.95).animate(
-        CurvedAnimation(parent: _fakeCtrl, curve: Curves.easeInOut),
-      );
-      _fakeCtrl.repeat(reverse: true);
-    });
-  }
-
-  @override
-  void dispose() {
-    _fakeCtrl.dispose();
-    super.dispose();
-  }
-
-  double _getBufferedProgress() {
-    final ctrl = widget.controller;
-    if (ctrl == null || !ctrl.value.isInitialized) return 0.0;
-
-    if (ctrl.value.buffered.isEmpty) return 0.0;
-
-    final bufferedEnd = ctrl.value.buffered.last.end.inMilliseconds;
-    final duration = ctrl.value.duration.inMilliseconds;
-
-    if (duration <= 0) return 0.0;
-
-    return (bufferedEnd / duration).clamp(0.0, 1.0);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
-    // If we have a real controller, listen to it
-    if (widget.controller != null) {
-      return ValueListenableBuilder<VideoPlayerValue>(
-        valueListenable: widget.controller!,
-        builder: (_, value, __) {
-          final progress = _getBufferedProgress();
-          return _buildContent(progress, isReal: true, l10n: l10n);
-        },
-      );
-    }
-
-    // Otherwise use fake animation
-    return AnimatedBuilder(
-      animation: _fakeAnim,
-      builder: (_, __) => _buildContent(
-        _fakeAnim.value,
-        isReal: false,
-        l10n: l10n,
-      ),
-    );
-  }
-
-  Widget _buildContent(
-    double value, {
-    required bool isReal,
-    required AppLocalizations l10n,
-  }) {
-    final pct = (value * 100).toInt();
     return Container(
       color: Colors.black87,
       alignment: Alignment.center,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '${widget.message} $pct%',
-            style: const TextStyle(color: Colors.white, fontSize: 14),
+          const CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(_kPrimary),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            width: 240,
-            child: LinearProgressIndicator(
-              value: value,
-              valueColor: const AlwaysStoppedAnimation<Color>(_kPrimary),
-              backgroundColor: Colors.white24,
-              minHeight: 4,
+          Text(
+            message,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          if (!isReal) ...[
-            const SizedBox(height: 12),
-            Text(
-              pct < 35
-                  ? l10n.extractingLink
-                  : pct < 65
-                      ? l10n.preparingPlayback
-                      : l10n.almostReady,
-              style: const TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-          ],
         ],
       ),
     );

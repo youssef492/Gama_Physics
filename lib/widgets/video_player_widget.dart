@@ -37,16 +37,6 @@ class VideoPlayerWidget extends StatefulWidget {
   final String rawVideoUrl;
 
   // بيانات المشاهدة — اختيارية (مش موجودة في شاشة المدرس)
-  // بيانات المشاهدة — اختيارية (مش موجودة في شاشة المدرس)
-  // بيانات المشاهدة — اختيارية (مش موجودة في شاشة المدرس)
-  // بيانات المشاهدة — اختيارية (مش موجودة في شاشة المدرس)
-  // بيانات المشاهدة — اختيارية (مش موجودة في شاشة المدرس)
-  // بيانات المشاهدة — اختيارية (مش موجودة في شاشة المدرس)
-  // بيانات المشاهدة — اختيارية (مش موجودة في شاشة المدرس)
-  // بيانات المشاهدة — اختيارية (مش موجودة في شاشة المدرس)
-  // بيانات المشاهدة — اختيارية (مش موجودة في شاشة المدرس)
-  // بيانات المشاهدة — اختيارية (مش موجودة في شاشة المدرس)
-  // بيانات المشاهدة — اختيارية (مش موجودة في شاشة المدرس)
   final String lessonId;
   final String studentId;
   final String studentName;
@@ -143,7 +133,6 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
       _controller = ctrl;
 
-      // ←←← التعديل هنا
       await ctrl.initialize();
       if (!mounted) return;
 
@@ -246,12 +235,18 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     _resetTimer();
   }
 
+  // ✅ IMPROVED QUALITY SWITCHING
   Future<void> _setQuality(YoutubeQualityOption option) async {
     final ctrl = _controller;
     if (ctrl == null) return;
 
-    final pos = ctrl.value.position;
+    // 1️⃣ احفظ الحالة الحالية
+    final currentPosition = ctrl.value.position;
     final wasPlaying = ctrl.value.isPlaying;
+
+    if (wasPlaying) {
+      await ctrl.pause();
+    }
 
     setState(() {
       _selectedQualityLabel = option.label;
@@ -259,36 +254,82 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
     });
 
     try {
-      // جلب URL جديد بالجودة المطلوبة
-      final result = await YoutubeService.getStreamUrl(
-        widget.rawVideoUrl,
-        retryCount: 1,
-        forceRefresh: true,
-      );
-      final chosen =
-          result.allStreams.where((q) => q.label == option.label).firstOrNull;
-      final url = chosen?.url ?? option.url;
+      // 2️⃣ جلب URL جديد بالجودة المطلوبة
+      String newUrl;
+      try {
+        final result = await YoutubeService.getStreamUrl(
+          widget.rawVideoUrl,
+          retryCount: 2,
+          forceRefresh: true,
+        );
 
-      setState(() => _qualityOptions = result.allStreams);
+        final selectedStream =
+            result.allStreams.where((q) => q.label == option.label).firstOrNull;
 
-      // reload بالـ URL الجديد
-      await _loadVideo(
-        overrideUrl: url,
-        overrideQuality: option.label,
-        autoPlay: false,
-      );
+        if (selectedStream != null) {
+          newUrl = selectedStream.url;
+          if (mounted) {
+            setState(() => _qualityOptions = result.allStreams);
+          }
+        } else {
+          newUrl = option.url;
+        }
+      } catch (e) {
+        debugPrint('[Quality] Error fetching new stream: $e');
+        newUrl = option.url;
+      }
 
-      // رجع للموضع القديم
-      await _controller?.seekTo(pos);
-      if (wasPlaying) await _controller?.play();
-    } catch (_) {
-      await _loadVideo(
-        overrideUrl: option.url,
-        overrideQuality: option.label,
-        autoPlay: false,
-      );
-      await _controller?.seekTo(pos);
-      if (wasPlaying) await _controller?.play();
+      if (!mounted) return;
+
+      // 4️⃣ أنشئ controller جديد
+      final newController = VideoPlayerController.networkUrl(Uri.parse(newUrl));
+
+      try {
+        await newController.initialize();
+
+        if (!mounted) {
+          await newController.dispose();
+          return;
+        }
+
+        // 5️⃣ اضبط السرعة على نفس السرعة السابقة
+        await newController.setPlaybackSpeed(_playbackSpeed);
+
+        // 6️⃣ اذهب إلى نفس الموضع
+        debugPrint('[Quality] Seeking to: ${currentPosition.inSeconds}s');
+        await newController.seekTo(currentPosition);
+
+        // 7️⃣ استبدل الـ controller القديم بالجديد
+        final oldController = _controller;
+        _controller = newController;
+        _controller!.addListener(_onPlayingChanged);
+
+        // 8️⃣ شغّل الفيديو إذا كان يعمل من قبل
+        if (wasPlaying) {
+          await _controller!.play();
+        }
+
+        if (mounted) {
+          setState(() => _loadState = _VideoLoadState.ready);
+        }
+
+        // 9️⃣ تخلص من الـ controller القديم بعد تأخير صغير
+        await Future.delayed(const Duration(milliseconds: 500));
+        await oldController?.dispose();
+
+        debugPrint('[Quality] Successfully switched to ${option.label}');
+      } catch (e) {
+        debugPrint('[Quality] Error initializing new controller: $e');
+        await newController.dispose();
+        if (mounted) {
+          setState(() => _loadState = _VideoLoadState.errorOther);
+        }
+      }
+    } catch (e) {
+      debugPrint('[Quality] Unexpected error: $e');
+      if (mounted) {
+        setState(() => _loadState = _VideoLoadState.errorOther);
+      }
     }
   }
 
@@ -516,7 +557,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Fullscreen Screen (fvp version — بيشارك نفس الـ controller)
+// Fullscreen Screen (fvp version)
 // ─────────────────────────────────────────────────────────────────────────────
 class VideoFullScreenFvp extends StatefulWidget {
   final VideoPlayerController controller;
@@ -666,7 +707,11 @@ class _VideoFullScreenFvpState extends State<VideoFullScreenFvp> {
       onSelect: (i) async {
         final option = widget.qualityOptions[i];
         setState(() => _selectedQualityLabel = option.label);
-        await widget.onQualityChanged(option);
+        try {
+          await widget.onQualityChanged(option);
+        } catch (e) {
+          debugPrint('[Fullscreen Quality] Error: $e');
+        }
       },
     );
   }
